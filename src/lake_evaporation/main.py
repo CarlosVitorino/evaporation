@@ -40,14 +40,14 @@ class LakeEvaporationApp:
         self.logger.info("=" * 60)
         self.logger.info(f"Configuration: {self.config}")
 
-        # Initialize components
-        self.api_client = None
-        self.discovery = None
-        self.data_fetcher = None
-        self.processor = None
-        self.evaporation_calc = None
-        self.sunshine_calc = None
-        self.writer = None
+        # Initialize components (will be set in initialize_components)
+        self.api_client: Optional[APIClient] = None
+        self.discovery: Optional[TimeSeriesDiscovery] = None
+        self.data_fetcher: Optional[DataFetcher] = None
+        self.processor: Optional[DataProcessor] = None
+        self.evaporation_calc: Optional[EvaporationCalculator] = None
+        self.sunshine_calc: Optional[SunshineCalculator] = None
+        self.writer: Optional[DataWriter] = None
 
     def initialize_components(self) -> None:
         """Initialize all application components."""
@@ -105,6 +105,14 @@ class LakeEvaporationApp:
         try:
             # Initialize components
             self.initialize_components()
+            
+            # Ensure components are initialized
+            assert self.discovery is not None
+            assert self.data_fetcher is not None
+            assert self.processor is not None
+            assert self.evaporation_calc is not None
+            assert self.sunshine_calc is not None
+            assert self.writer is not None
 
             # Determine target date (previous day if not specified)
             if target_date is None:
@@ -169,6 +177,14 @@ class LakeEvaporationApp:
         Returns:
             Result dictionary or None if processing failed
         """
+        # Ensure components are initialized
+        assert self.discovery is not None
+        assert self.data_fetcher is not None
+        assert self.processor is not None
+        assert self.evaporation_calc is not None
+        assert self.sunshine_calc is not None
+        assert self.writer is not None
+        
         location_name = location.get("name", "Unknown")
         self.logger.info(f"Processing location: {location_name}")
 

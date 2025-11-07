@@ -6,5 +6,5 @@ sensor observations using the Shuttleworth algorithm.
 """
 
 __version__ = "0.1.0"
-__author__ = "Your Company"
+__author__ = "Kisters AG"
 __description__ = "Lake evaporation estimation based on sensor observations"
