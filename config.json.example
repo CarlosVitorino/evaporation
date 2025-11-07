@@ -1,0 +1,43 @@
+{
+  "environment": "dev",
+  "api": {
+    "base_url": "https://api.datasphere.example.com",
+    "timeout": 30,
+    "max_retries": 3
+  },
+  "processing": {
+    "timezone": "UTC",
+    "run_hour": 1,
+    "lookback_days": 1
+  },
+  "tags": {
+    "lake_evaporation": "lakeEvaporation"
+  },
+  "constants": {
+    "albedo": 0.23,
+    "angstrom_prescott": {
+      "a": 0.25,
+      "b": 0.5
+    }
+  },
+  "units": {
+    "temperature": "celsius",
+    "humidity": "percent",
+    "wind_speed": "km/h",
+    "pressure": "kPa",
+    "sunshine": "hours",
+    "evaporation": "mm"
+  },
+  "data_requirements": {
+    "required_fields": [
+      "temperature",
+      "humidity",
+      "wind_speed",
+      "air_pressure"
+    ],
+    "optional_fields": [
+      "sunshine_hours",
+      "global_radiation"
+    ]
+  }
+}

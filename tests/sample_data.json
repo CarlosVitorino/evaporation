@@ -1,0 +1,90 @@
+{
+  "location_metadata": {
+    "time_series_id": "ts_lake_001",
+    "name": "Lake Evaporation Site 1",
+    "organization_id": "org_001",
+    "organization_name": "EVS Test Organization",
+    "location": {
+      "latitude": 45.5,
+      "longitude": 10.8,
+      "altitude": 250.0
+    },
+    "temperature_ts": "tsId(temp_001)",
+    "humidity_ts": "tsId(humid_001)",
+    "wind_speed_ts": "tsId(wind_001)",
+    "air_pressure_ts": "tsId(pressure_001)",
+    "sunshine_hours_ts": "tsId(sunshine_001)",
+    "global_radiation_ts": "tsId(radiation_001)"
+  },
+  "sensor_data": {
+    "temperature": [
+      {"timestamp": "2024-06-21T00:00:00", "value": 12.5},
+      {"timestamp": "2024-06-21T03:00:00", "value": 11.8},
+      {"timestamp": "2024-06-21T06:00:00", "value": 13.2},
+      {"timestamp": "2024-06-21T09:00:00", "value": 16.8},
+      {"timestamp": "2024-06-21T12:00:00", "value": 21.5},
+      {"timestamp": "2024-06-21T15:00:00", "value": 23.2},
+      {"timestamp": "2024-06-21T18:00:00", "value": 19.8},
+      {"timestamp": "2024-06-21T21:00:00", "value": 15.4}
+    ],
+    "humidity": [
+      {"timestamp": "2024-06-21T00:00:00", "value": 78.0},
+      {"timestamp": "2024-06-21T03:00:00", "value": 82.0},
+      {"timestamp": "2024-06-21T06:00:00", "value": 75.0},
+      {"timestamp": "2024-06-21T09:00:00", "value": 65.0},
+      {"timestamp": "2024-06-21T12:00:00", "value": 55.0},
+      {"timestamp": "2024-06-21T15:00:00", "value": 52.0},
+      {"timestamp": "2024-06-21T18:00:00", "value": 60.0},
+      {"timestamp": "2024-06-21T21:00:00", "value": 70.0}
+    ],
+    "wind_speed": [
+      {"timestamp": "2024-06-21T00:00:00", "value": 8.5},
+      {"timestamp": "2024-06-21T03:00:00", "value": 7.2},
+      {"timestamp": "2024-06-21T06:00:00", "value": 9.8},
+      {"timestamp": "2024-06-21T09:00:00", "value": 12.4},
+      {"timestamp": "2024-06-21T12:00:00", "value": 15.6},
+      {"timestamp": "2024-06-21T15:00:00", "value": 18.2},
+      {"timestamp": "2024-06-21T18:00:00", "value": 14.3},
+      {"timestamp": "2024-06-21T21:00:00", "value": 10.7}
+    ],
+    "air_pressure": [
+      {"timestamp": "2024-06-21T00:00:00", "value": 101.2},
+      {"timestamp": "2024-06-21T03:00:00", "value": 101.3},
+      {"timestamp": "2024-06-21T06:00:00", "value": 101.4},
+      {"timestamp": "2024-06-21T09:00:00", "value": 101.3},
+      {"timestamp": "2024-06-21T12:00:00", "value": 101.1},
+      {"timestamp": "2024-06-21T15:00:00", "value": 101.0},
+      {"timestamp": "2024-06-21T18:00:00", "value": 101.1},
+      {"timestamp": "2024-06-21T21:00:00", "value": 101.2}
+    ],
+    "sunshine_hours": [
+      {"timestamp": "2024-06-21T00:00:00", "value": 0.0},
+      {"timestamp": "2024-06-21T03:00:00", "value": 0.0},
+      {"timestamp": "2024-06-21T06:00:00", "value": 0.5},
+      {"timestamp": "2024-06-21T09:00:00", "value": 1.0},
+      {"timestamp": "2024-06-21T12:00:00", "value": 1.0},
+      {"timestamp": "2024-06-21T15:00:00", "value": 1.0},
+      {"timestamp": "2024-06-21T18:00:00", "value": 0.8},
+      {"timestamp": "2024-06-21T21:00:00", "value": 0.2}
+    ],
+    "global_radiation": [
+      {"timestamp": "2024-06-21T00:00:00", "value": 0.0},
+      {"timestamp": "2024-06-21T03:00:00", "value": 0.0},
+      {"timestamp": "2024-06-21T06:00:00", "value": 150.5},
+      {"timestamp": "2024-06-21T09:00:00", "value": 450.2},
+      {"timestamp": "2024-06-21T12:00:00", "value": 680.8},
+      {"timestamp": "2024-06-21T15:00:00", "value": 520.3},
+      {"timestamp": "2024-06-21T18:00:00", "value": 280.7},
+      {"timestamp": "2024-06-21T21:00:00", "value": 45.2}
+    ]
+  },
+  "expected_aggregates": {
+    "t_min": 11.8,
+    "t_max": 23.2,
+    "rh_min": 52.0,
+    "rh_max": 82.0,
+    "wind_speed_avg": 12.0875,
+    "air_pressure_avg": 101.2,
+    "sunshine_hours": 4.5
+  }
+}
