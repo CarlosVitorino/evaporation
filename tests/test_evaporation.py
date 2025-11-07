@@ -4,7 +4,7 @@ Tests for evaporation calculator module.
 Tests the Shuttleworth algorithm implementation.
 """
 
-import pytest
+import pytest  # type: ignore
 from datetime import datetime
 from src.lake_evaporation.evaporation import EvaporationCalculator
 from src.lake_evaporation.shuttleworth import ShuttleworthCalculator

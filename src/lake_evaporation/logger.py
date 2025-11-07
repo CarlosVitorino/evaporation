@@ -94,6 +94,9 @@ class LoggerContext:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Exit context and log completion or error."""
+        if self.start_time is None:
+            return True
+            
         duration = (datetime.now() - self.start_time).total_seconds()
 
         if exc_type is not None:

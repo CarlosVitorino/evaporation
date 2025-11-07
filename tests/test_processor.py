@@ -4,7 +4,7 @@ Tests for data processor module.
 Tests aggregation, unit conversion, and validation functionality.
 """
 
-import pytest
+import pytest  # type: ignore
 from src.lake_evaporation.processor import DataProcessor
 
 

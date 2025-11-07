@@ -113,6 +113,10 @@ class TimeSeriesDiscovery:
             # For each organization, find lake evaporation time series
             for org in organizations:
                 org_id = org.get("id")
+                if not org_id:
+                    self.logger.warning(f"Organization {org.get('name')} has no ID, skipping")
+                    continue
+                    
                 self.logger.info(f"Processing organization: {org.get('name')} ({org_id})")
 
                 time_series_list = self.discover_lake_evaporation_series(org_id)

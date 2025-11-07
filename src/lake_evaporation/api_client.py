@@ -7,9 +7,10 @@ Handles API requests, authentication, and error handling.
 import os
 import logging
 from typing import Dict, Any, Optional, List
-import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
+
+import requests  # type: ignore
+from requests.adapters import HTTPAdapter  # type: ignore
+from urllib3.util.retry import Retry  # type: ignore
 
 
 class APIClient:
@@ -148,7 +149,12 @@ class APIClient:
             List of organization objects
         """
         self.logger.info("Fetching organizations")
-        return self.get("/api/organizations")
+        result = self.get("/api/organizations")
+        # API might return a dict with a list inside, or directly a list
+        if isinstance(result, list):
+            return result
+        # If it's a dict, try to extract the organizations list
+        return result.get("organizations", [])
 
     def get_time_series_by_tag(
         self,
@@ -168,7 +174,12 @@ class APIClient:
         self.logger.info(f"Fetching time series for org {organization_id} with tag '{tag}'")
         endpoint = f"/api/organizations/{organization_id}/timeseries"
         params = {"tag": tag}
-        return self.get(endpoint, params=params)
+        result = self.get(endpoint, params=params)
+        # API might return a dict with a list inside, or directly a list
+        if isinstance(result, list):
+            return result
+        # If it's a dict, try to extract the timeseries list
+        return result.get("timeseries", [])
 
     def get_time_series_data(
         self,
