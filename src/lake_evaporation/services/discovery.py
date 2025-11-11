@@ -64,7 +64,7 @@ class TimeSeriesDiscovery:
             # Filter timeseries that have lakeEvaporation metadata
             lake_evap_series = []
             for ts in all_timeseries:
-                metadata = ts.get("metadata", {})
+                metadata = ts.get("metadata") or {}  # Handle None metadata
                 if "lakeEvaporation" in metadata:
                     lake_evap_series.append(ts)
 
@@ -102,8 +102,8 @@ class TimeSeriesDiscovery:
             Parsed metadata dictionary
         """
         # In the new API, metadata is a JsonNode
-        metadata = time_series.get("metadata", {})
-        lake_evap_metadata = metadata.get("lakeEvaporation", {})
+        metadata = time_series.get("metadata") or {}  # Handle None metadata
+        lake_evap_metadata = metadata.get("lakeEvaporation") or {}  # Handle None
 
         if not lake_evap_metadata:
             self.logger.warning(

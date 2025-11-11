@@ -64,8 +64,8 @@ def extract_location_metadata(time_series: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Parsed metadata dictionary with location and sensor references
     """
-    metadata = time_series.get("metadata", {})
-    lake_evap_metadata = metadata.get("lakeEvaporation", {})
+    metadata = time_series.get("metadata") or {}  # Handle None metadata
+    lake_evap_metadata = metadata.get("lakeEvaporation") or {}  # Handle None
 
     # Extract location data from embedded fields (includeLocationData=true)
     location_data = {

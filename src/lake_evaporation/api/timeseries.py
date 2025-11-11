@@ -8,7 +8,7 @@ from typing import List, Dict, Any, Optional
 
 
 class TimeSeriesAPI:
-    """Mixin for time series-related API operations."""
+    """Time series-related API operations."""
 
     def get_time_series_list(
         self,

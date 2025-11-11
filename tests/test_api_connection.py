@@ -8,7 +8,7 @@ These tests require valid credentials in .env or config.json.
 import pytest  # type: ignore
 import os
 from pathlib import Path
-
+import sys; sys.path.insert(0, '.'); 
 from src.lake_evaporation.core import Config
 from src.lake_evaporation.api import KistersAPI
 
@@ -16,30 +16,43 @@ from src.lake_evaporation.api import KistersAPI
 @pytest.fixture(scope="module")
 def config():
     """Load configuration for API tests."""
+    print("\n=== CONFIG FIXTURE CALLED ===")  # Debug print
     try:
-        return Config()
-    except FileNotFoundError:
+        cfg = Config()
+        print(f"Config loaded: {cfg}")
+        return cfg
+    except FileNotFoundError as e:
+        print(f"Config file not found: {e}")
         pytest.skip("Configuration file not found. Create config.json or .env with API credentials.")
-
 
 @pytest.fixture(scope="module")
 def api_client(config):
     """Create authenticated API client."""
+    print("\n=== API CLIENT FIXTURE CALLED ===")  # Debug print
+    print(f"Config: {config}")
+    
     client = KistersAPI(
         base_url=config.api_base_url,
         username=config.auth_username,
         email=config.auth_email,
         password=config.auth_password,
         timeout=config.api_timeout,
-        max_retries=config.api_max_retries
+        max_retries=config.api_max_retries,
+        verify_ssl=config.api_verify_ssl,
     )
 
     try:
+        print("Attempting login...")
         client.login()
+        print("Login successful!")
         yield client
+        print("Logging out...")
         client.logout()
     except Exception as e:
-        pytest.skip(f"API authentication failed: {e}")
+        print(f"API authentication failed: {e}")
+        import traceback
+        traceback.print_exc()
+        #pytest.skip(f"API authentication failed: {e}")
 
 
 class TestAPIConnection:
@@ -47,12 +60,14 @@ class TestAPIConnection:
 
     def test_authentication(self, api_client):
         """Test that authentication works."""
+        print("\n=== TEST AUTHENTICATION CALLED ===")  # Add breakpoint here
         assert api_client.is_authenticated
         assert api_client.user_data is not None
         assert "userName" in api_client.user_data
 
     def test_get_organizations(self, api_client):
         """Test fetching organizations."""
+        print("\n=== TEST GET ORGANIZATIONS CALLED ===")  # Add breakpoint here
         orgs = api_client.get_organizations()
         assert isinstance(orgs, list)
         # User should have access to at least one organization
@@ -103,7 +118,7 @@ class TestAPIConnection:
             timeseries = api_client.get_time_series_list(org_id)
 
             for ts in timeseries:
-                metadata = ts.get("metadata", {})
+                metadata = ts.get("metadata") or {}  # Handle None metadata
                 if "lakeEvaporation" in metadata:
                     total_lake_evap += 1
 

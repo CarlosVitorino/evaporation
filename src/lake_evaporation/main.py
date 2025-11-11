@@ -57,6 +57,7 @@ class LakeEvaporationApp:
             password=self.config.auth_password,
             timeout=self.config.api_timeout,
             max_retries=self.config.api_max_retries,
+            verify_ssl=self.config.api_verify_ssl,
             logger=self.logger
         )
 

@@ -101,6 +101,11 @@ class Config:
         return self.get("api.max_retries", 3)
 
     @property
+    def api_verify_ssl(self) -> bool:
+        """Get API SSL verification setting."""
+        return self.get("api.verify_ssl", True)
+
+    @property
     def auth_username(self) -> Optional[str]:
         """Get authentication username."""
         return self.get("authentication.username")

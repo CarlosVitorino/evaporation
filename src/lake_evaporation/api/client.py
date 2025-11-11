@@ -20,6 +20,7 @@ class APIClient:
         base_url: str,
         timeout: int = 30,
         max_retries: int = 3,
+        verify_ssl: bool = True,
         logger: Optional[logging.Logger] = None
     ):
         """
@@ -34,11 +35,18 @@ class APIClient:
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self.logger = logger or logging.getLogger(__name__)
+        self.verify_ssl = verify_ssl
 
         # Session state
         self.csrf_token: Optional[str] = None
         self.user_data: Optional[Dict[str, Any]] = None
         self.is_authenticated = False
+
+        # Disable SSL warnings when verify_ssl is False
+        if not verify_ssl:
+            import urllib3
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 
         # Setup session with retry strategy
         self.session = requests.Session()
@@ -71,6 +79,7 @@ class APIClient:
         self,
         method: str,
         endpoint: str,
+        skip_auth_check: bool = False,
         **kwargs
     ) -> requests.Response:
         """
@@ -79,6 +88,7 @@ class APIClient:
         Args:
             method: HTTP method (GET, POST, PUT, etc.)
             endpoint: API endpoint (without base URL)
+            skip_auth_check: Skip authentication check (for auth endpoints)
             **kwargs: Additional arguments for requests
 
         Returns:
@@ -88,10 +98,12 @@ class APIClient:
             requests.exceptions.RequestException: On request failure
         """
         # Ensure we're authenticated for non-auth endpoints
-        if not endpoint.startswith("/auth") and not self.is_authenticated:
+        if not skip_auth_check and not endpoint.startswith("/auth") and not self.is_authenticated:
             raise RuntimeError("Not authenticated. Call login() first.")
 
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
+        kwargs.setdefault('verify', self.verify_ssl)
+
         self.logger.debug(f"{method} {url}")
 
         try:
@@ -122,7 +134,7 @@ class APIClient:
         response = self._make_request("GET", endpoint, params=params)
         return response.json()
 
-    def post(self, endpoint: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    def post(self, endpoint: str, data: Dict[str, Any], skip_auth_check: bool = False) -> Dict[str, Any]:
         """
         Make POST request.
 
@@ -133,7 +145,7 @@ class APIClient:
         Returns:
             JSON response as dictionary
         """
-        response = self._make_request("POST", endpoint, json=data)
+        response = self._make_request("POST", endpoint, json=data, skip_auth_check=skip_auth_check)
         return response.json()
 
     def put(self, endpoint: str, data: Dict[str, Any]) -> Dict[str, Any]:

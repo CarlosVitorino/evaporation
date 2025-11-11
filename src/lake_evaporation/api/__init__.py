@@ -31,6 +31,7 @@ class KistersAPI(AuthAPI, OrganizationsAPI, LocationsAPI, TimeSeriesAPI):
         password: Optional[str] = None,
         timeout: int = 30,
         max_retries: int = 3,
+        verify_ssl: bool = True,
         logger: Optional[logging.Logger] = None
     ):
         """
@@ -43,6 +44,7 @@ class KistersAPI(AuthAPI, OrganizationsAPI, LocationsAPI, TimeSeriesAPI):
             password: Password for authentication
             timeout: Request timeout in seconds
             max_retries: Maximum number of retry attempts
+            verify_ssl: Whether to verify SSL certificates
             logger: Logger instance
         """
         super().__init__(
@@ -52,6 +54,7 @@ class KistersAPI(AuthAPI, OrganizationsAPI, LocationsAPI, TimeSeriesAPI):
             password=password,
             timeout=timeout,
             max_retries=max_retries,
+            verify_ssl=verify_ssl,
             logger=logger
         )
 

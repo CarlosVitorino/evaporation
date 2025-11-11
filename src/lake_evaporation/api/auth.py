@@ -24,6 +24,7 @@ class AuthAPI(APIClient):
         password: Optional[str] = None,
         timeout: int = 30,
         max_retries: int = 3,
+        verify_ssl: bool = True,
         logger: Optional[logging.Logger] = None
     ):
         """
@@ -36,9 +37,10 @@ class AuthAPI(APIClient):
             password: Password for authentication
             timeout: Request timeout in seconds
             max_retries: Maximum number of retry attempts
+            verify_ssl: Whether to verify SSL certificates
             logger: Logger instance
         """
-        super().__init__(base_url, timeout, max_retries, logger)
+        super().__init__(base_url, timeout, max_retries, verify_ssl, logger)
 
         self.username = username or os.getenv("API_USERNAME")
         self.email = email or os.getenv("API_EMAIL")
@@ -69,19 +71,18 @@ class AuthAPI(APIClient):
 
         if self.username:
             credentials["userName"] = self.username
-        else:
+        elif self.email:
             credentials["email"] = self.email
+        else:
+            raise ValueError("Either username or email must be provided for authentication")
 
         try:
-            url = f"{self.base_url}/auth/login"
-            self.logger.debug(f"POST {url}")
-
-            response = self.session.post(
-                url,
-                json=credentials,
-                timeout=self.timeout
+            response = self._make_request(
+                "POST",
+                "/auth/login",
+                skip_auth_check=True,
+                json=credentials
             )
-            response.raise_for_status()
 
             # Extract CSRF token from response headers
             self.csrf_token = response.headers.get("x-csrf-token")
@@ -94,6 +95,9 @@ class AuthAPI(APIClient):
 
             # Update headers with new CSRF token
             self._update_headers()
+            if self.user_data is None:
+                self.logger.error("No user data received in login response")
+                raise ValueError("No user data received in login response")
 
             self.logger.info(f"Successfully logged in as {self.user_data.get('userName', 'unknown')}")
             return self.user_data
@@ -117,9 +121,8 @@ class AuthAPI(APIClient):
         self.logger.info("Logging out from KISTERS Web Portal")
 
         try:
-            url = f"{self.base_url}/auth/logout"
-            response = self.session.post(url, timeout=self.timeout)
-            response.raise_for_status()
+            # Use internal method for logout (already authenticated)
+            self._make_request("POST", "/auth/logout")
 
             self.is_authenticated = False
             self.csrf_token = None
@@ -147,9 +150,8 @@ class AuthAPI(APIClient):
         self.logger.debug("Refreshing session")
 
         try:
-            url = f"{self.base_url}/auth/refresh"
-            response = self.session.post(url, timeout=self.timeout)
-            response.raise_for_status()
+            # Use internal method for refresh (already authenticated)
+            response = self._make_request("POST", "/auth/refresh")
 
             # Update user data
             self.user_data = response.json()
@@ -159,6 +161,10 @@ class AuthAPI(APIClient):
             if new_token:
                 self.csrf_token = new_token
                 self._update_headers()
+
+            if self.user_data is None:
+                self.logger.error("No user data received in login response")
+                raise ValueError("No user data received in login response")
 
             self.logger.debug("Session refreshed successfully")
             return self.user_data
