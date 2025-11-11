@@ -53,15 +53,22 @@ class LakeEvaporationApp:
         """Initialize all application components."""
         self.logger.info("Initializing components...")
 
-        # API Client
+        # API Client with new authentication
         self.api_client = APIClient(
             base_url=self.config.api_base_url,
+            username=self.config.auth_username,
+            email=self.config.auth_email,
+            password=self.config.auth_password,
             timeout=self.config.api_timeout,
             max_retries=self.config.api_max_retries,
             logger=self.logger
         )
 
-        # Discovery
+        # Login to the portal
+        self.logger.info("Logging in to KISTERS Web Portal...")
+        self.api_client.login()
+
+        # Discovery (works across all organizations)
         self.discovery = TimeSeriesDiscovery(
             api_client=self.api_client,
             logger=self.logger
@@ -122,8 +129,16 @@ class LakeEvaporationApp:
             self.logger.info(f"Calculating evaporation for: {target_date.date()}")
 
             # Discover all lake evaporation locations
+            # If organization_id is configured, limit search to that org
+            # Otherwise, search across all organizations
+            organization_id = self.config.api_organization_id
+            if organization_id:
+                self.logger.info(f"Limiting search to organization: {organization_id}")
+
             with LoggerContext(self.logger, "location discovery"):
-                locations = self.discovery.get_all_evaporation_locations()
+                locations = self.discovery.get_all_evaporation_locations(
+                    organization_id=organization_id
+                )
 
             if not locations:
                 self.logger.warning("No lake evaporation locations found")
@@ -250,6 +265,7 @@ class LakeEvaporationApp:
             "date": target_date,
             "evaporation": evaporation,
             "location_name": location_name,
+            "organization_id": location.get("organization_id"),
             "metadata": self.writer.create_write_metadata(aggregates, location)
         }
 

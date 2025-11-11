@@ -13,7 +13,11 @@ from .api_client import APIClient
 class DataWriter:
     """Write evaporation results to time series."""
 
-    def __init__(self, api_client: APIClient, logger: Optional[logging.Logger] = None):
+    def __init__(
+        self,
+        api_client: APIClient,
+        logger: Optional[logging.Logger] = None
+    ):
         """
         Initialize data writer.
 
@@ -29,7 +33,8 @@ class DataWriter:
         time_series_id: str,
         date: datetime,
         evaporation: float,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
+        organization_id: Optional[str] = None
     ) -> bool:
         """
         Write evaporation value to time series.
@@ -37,11 +42,16 @@ class DataWriter:
         The value is written at midnight of the previous day and is valid for
         the whole previous day.
 
+        Note: The KISTERS Web Portal API schema provided does not include
+        the data values writing endpoint. This method uses a placeholder endpoint
+        that may need to be updated based on the actual API documentation.
+
         Args:
             time_series_id: Time series ID to write to
             date: Date the evaporation was calculated for
             evaporation: Evaporation value in mm/day
             metadata: Optional metadata (calculation details, source data, etc.)
+            organization_id: Organization ID (if required by API)
 
         Returns:
             True if successful, False otherwise
@@ -65,11 +75,13 @@ class DataWriter:
             })
 
             # Write to API
+            # TODO: Update this based on actual KISTERS API data writing endpoint
             response = self.api_client.write_time_series_value(
                 time_series_id=time_series_id,
                 timestamp=timestamp.isoformat(),
                 value=evaporation,
-                metadata=write_metadata
+                metadata=write_metadata,
+                organization_id=organization_id
             )
 
             self.logger.debug(f"Write response: {response}")
@@ -88,7 +100,8 @@ class DataWriter:
 
         Args:
             results: Dictionary mapping time series IDs to result dictionaries
-                    containing 'date', 'evaporation', and optional 'metadata'
+                    containing 'date', 'evaporation', 'organization_id',
+                    and optional 'metadata'
 
         Returns:
             Dictionary mapping time series IDs to success status
@@ -101,7 +114,8 @@ class DataWriter:
                 time_series_id=ts_id,
                 date=result["date"],
                 evaporation=result["evaporation"],
-                metadata=result.get("metadata")
+                metadata=result.get("metadata"),
+                organization_id=result.get("organization_id")
             )
             status[ts_id] = success
 
