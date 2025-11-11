@@ -1,0 +1,61 @@
+{
+  "// Example metadata for a lake evaporation time series": "",
+  "// This would be part of the time series object in the KISTERS Web Portal": "",
+
+  "id": "evaporation_ts_001",
+  "name": "Lake Brandenburg - Daily Evaporation",
+  "locationId": "loc_brandenburg_001",
+  "locationName": "Lake Brandenburg",
+  "variable": "evaporation",
+  "unit": "mm/day",
+
+  "metadata": {
+    "lakeEvaporation": {
+      "// ============================================": "",
+      "// REQUIRED: Sensor Time Series References": "",
+      "// ============================================": "",
+
+      "Temps": "tsId(100001)",
+      "RHTs": "tsId(100002)",
+      "WSpeedTs": "tsId(100003)",
+      "AirPressureTs": "tsId(100004)",
+
+      "// ============================================": "",
+      "// OPTIONAL: Additional Sensors": "",
+      "// ============================================": "",
+
+      "hoursOfSunshineTs": "tsId(100005)",
+      "globalRadiationTs": "tsId(100006)",
+
+      "// ============================================": "",
+      "// OPTIONAL: Location Parameters": "",
+      "// If not specified, taken from location geometry": "",
+      "// ============================================": "",
+
+      "latitude": 52.4125,
+      "longitude": 12.5316,
+      "altitude": 32.5,
+
+      "// ============================================": "",
+      "// OPTIONAL: Calculation Constants": "",
+      "// If not specified, uses system defaults": "",
+      "// ============================================": "",
+
+      "albedo": 0.23,
+      "angstromA": 0.25,
+      "angstromB": 0.5,
+
+      "// ============================================": "",
+      "// OPTIONAL: Documentation": "",
+      "// ============================================": "",
+
+      "description": "Daily lake evaporation calculated using Shuttleworth algorithm",
+      "algorithm": "Shuttleworth",
+      "version": "1.0",
+      "calculationUnit": "mm/day",
+      "notes": "Sensors from Brandenburg meteorological station, 500m from lake center",
+      "configuredBy": "J. Smith",
+      "configuredDate": "2024-01-15"
+    }
+  }
+}
