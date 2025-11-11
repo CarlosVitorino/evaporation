@@ -13,15 +13,22 @@ from .api_client import APIClient
 class DataWriter:
     """Write evaporation results to time series."""
 
-    def __init__(self, api_client: APIClient, logger: Optional[logging.Logger] = None):
+    def __init__(
+        self,
+        api_client: APIClient,
+        organization_id: str,
+        logger: Optional[logging.Logger] = None
+    ):
         """
         Initialize data writer.
 
         Args:
             api_client: API client instance
+            organization_id: Organization ID to work with
             logger: Logger instance
         """
         self.api_client = api_client
+        self.organization_id = organization_id
         self.logger = logger or logging.getLogger(__name__)
 
     def write_evaporation_value(
@@ -36,6 +43,10 @@ class DataWriter:
 
         The value is written at midnight of the previous day and is valid for
         the whole previous day.
+
+        Note: The KISTERS Web Portal API schema provided does not include
+        the data values writing endpoint. This method uses a placeholder endpoint
+        that may need to be updated based on the actual API documentation.
 
         Args:
             time_series_id: Time series ID to write to
@@ -65,11 +76,13 @@ class DataWriter:
             })
 
             # Write to API
+            # TODO: Update this based on actual KISTERS API data writing endpoint
             response = self.api_client.write_time_series_value(
                 time_series_id=time_series_id,
                 timestamp=timestamp.isoformat(),
                 value=evaporation,
-                metadata=write_metadata
+                metadata=write_metadata,
+                organization_id=self.organization_id
             )
 
             self.logger.debug(f"Write response: {response}")

@@ -13,15 +13,22 @@ from .api_client import APIClient
 class DataFetcher:
     """Fetch sensor data from time series."""
 
-    def __init__(self, api_client: APIClient, logger: Optional[logging.Logger] = None):
+    def __init__(
+        self,
+        api_client: APIClient,
+        organization_id: str,
+        logger: Optional[logging.Logger] = None
+    ):
         """
         Initialize data fetcher.
 
         Args:
             api_client: API client instance
+            organization_id: Organization ID to work with
             logger: Logger instance
         """
         self.api_client = api_client
+        self.organization_id = organization_id
         self.logger = logger or logging.getLogger(__name__)
 
     def fetch_time_series_data(
@@ -32,6 +39,10 @@ class DataFetcher:
     ) -> List[Dict[str, Any]]:
         """
         Fetch data for a time series reference.
+
+        Note: The KISTERS Web Portal API schema provided does not include
+        the data values endpoint. This method uses a placeholder endpoint
+        that may need to be updated based on the actual API documentation.
 
         Args:
             time_series_ref: Time series reference (tsId, tsPath, or exchangeId)
@@ -48,10 +59,12 @@ class DataFetcher:
             ts_id = self._parse_time_series_reference(time_series_ref)
 
             # Fetch data from API
+            # TODO: Update this based on actual KISTERS API data endpoint
             data = self.api_client.get_time_series_data(
                 time_series_id=ts_id,
                 start_date=start_date.isoformat(),
-                end_date=end_date.isoformat()
+                end_date=end_date.isoformat(),
+                organization_id=self.organization_id
             )
 
             # Extract data points

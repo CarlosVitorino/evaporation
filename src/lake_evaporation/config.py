@@ -41,6 +41,25 @@ class Config:
         if os.getenv("API_BASE_URL"):
             self.config["api"]["base_url"] = os.getenv("API_BASE_URL")
 
+        if os.getenv("API_ORGANIZATION_ID"):
+            self.config["api"]["organization_id"] = os.getenv("API_ORGANIZATION_ID")
+
+        # Authentication
+        if os.getenv("API_USERNAME"):
+            if "authentication" not in self.config:
+                self.config["authentication"] = {}
+            self.config["authentication"]["username"] = os.getenv("API_USERNAME")
+
+        if os.getenv("API_EMAIL"):
+            if "authentication" not in self.config:
+                self.config["authentication"] = {}
+            self.config["authentication"]["email"] = os.getenv("API_EMAIL")
+
+        if os.getenv("API_PASSWORD"):
+            if "authentication" not in self.config:
+                self.config["authentication"] = {}
+            self.config["authentication"]["password"] = os.getenv("API_PASSWORD")
+
         # Environment
         if os.getenv("ENVIRONMENT"):
             self.config["environment"] = os.getenv("ENVIRONMENT")
@@ -75,6 +94,11 @@ class Config:
         return self.get("api.base_url", "")
 
     @property
+    def api_organization_id(self) -> str:
+        """Get API organization ID."""
+        return self.get("api.organization_id", "")
+
+    @property
     def api_timeout(self) -> int:
         """Get API timeout in seconds."""
         return self.get("api.timeout", 30)
@@ -83,6 +107,21 @@ class Config:
     def api_max_retries(self) -> int:
         """Get maximum API retry attempts."""
         return self.get("api.max_retries", 3)
+
+    @property
+    def auth_username(self) -> Optional[str]:
+        """Get authentication username."""
+        return self.get("authentication.username")
+
+    @property
+    def auth_email(self) -> Optional[str]:
+        """Get authentication email."""
+        return self.get("authentication.email")
+
+    @property
+    def auth_password(self) -> Optional[str]:
+        """Get authentication password."""
+        return self.get("authentication.password")
 
     @property
     def timezone(self) -> str:

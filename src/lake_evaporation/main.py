@@ -53,23 +53,37 @@ class LakeEvaporationApp:
         """Initialize all application components."""
         self.logger.info("Initializing components...")
 
-        # API Client
+        # API Client with new authentication
         self.api_client = APIClient(
             base_url=self.config.api_base_url,
+            username=self.config.auth_username,
+            email=self.config.auth_email,
+            password=self.config.auth_password,
             timeout=self.config.api_timeout,
             max_retries=self.config.api_max_retries,
             logger=self.logger
         )
 
+        # Login to the portal
+        self.logger.info("Logging in to KISTERS Web Portal...")
+        self.api_client.login()
+
+        # Get organization ID
+        organization_id = self.config.api_organization_id
+        if not organization_id:
+            raise ValueError("Organization ID is required in configuration")
+
         # Discovery
         self.discovery = TimeSeriesDiscovery(
             api_client=self.api_client,
+            organization_id=organization_id,
             logger=self.logger
         )
 
         # Data Fetcher
         self.data_fetcher = DataFetcher(
             api_client=self.api_client,
+            organization_id=organization_id,
             logger=self.logger
         )
 
@@ -90,6 +104,7 @@ class LakeEvaporationApp:
         # Writer
         self.writer = DataWriter(
             api_client=self.api_client,
+            organization_id=organization_id,
             logger=self.logger
         )
 
