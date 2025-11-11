@@ -7,7 +7,7 @@ Handles writing calculated evaporation values to time series.
 import logging
 from typing import Dict, Any, Optional
 from datetime import datetime
-from .api_client import APIClient
+from .api import KistersAPI
 
 
 class DataWriter:
@@ -15,7 +15,7 @@ class DataWriter:
 
     def __init__(
         self,
-        api_client: APIClient,
+        api_client: KistersAPI,
         logger: Optional[logging.Logger] = None
     ):
         """

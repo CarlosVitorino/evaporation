@@ -7,7 +7,7 @@ Fetches time series data from the API for processing.
 import logging
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timedelta
-from .api_client import APIClient
+from .api import KistersAPI
 
 
 class DataFetcher:
@@ -15,7 +15,7 @@ class DataFetcher:
 
     def __init__(
         self,
-        api_client: APIClient,
+        api_client: KistersAPI,
         logger: Optional[logging.Logger] = None
     ):
         """
