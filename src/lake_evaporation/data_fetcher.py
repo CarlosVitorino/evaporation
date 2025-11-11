@@ -16,7 +16,6 @@ class DataFetcher:
     def __init__(
         self,
         api_client: APIClient,
-        organization_id: str,
         logger: Optional[logging.Logger] = None
     ):
         """
@@ -24,18 +23,17 @@ class DataFetcher:
 
         Args:
             api_client: API client instance
-            organization_id: Organization ID to work with
             logger: Logger instance
         """
         self.api_client = api_client
-        self.organization_id = organization_id
         self.logger = logger or logging.getLogger(__name__)
 
     def fetch_time_series_data(
         self,
         time_series_ref: str,
         start_date: datetime,
-        end_date: datetime
+        end_date: datetime,
+        organization_id: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """
         Fetch data for a time series reference.
@@ -48,6 +46,7 @@ class DataFetcher:
             time_series_ref: Time series reference (tsId, tsPath, or exchangeId)
             start_date: Start date for data fetch
             end_date: End date for data fetch
+            organization_id: Organization ID (if required by API)
 
         Returns:
             List of data points with timestamps and values
@@ -64,7 +63,7 @@ class DataFetcher:
                 time_series_id=ts_id,
                 start_date=start_date.isoformat(),
                 end_date=end_date.isoformat(),
-                organization_id=self.organization_id
+                organization_id=organization_id
             )
 
             # Extract data points
@@ -116,12 +115,16 @@ class DataFetcher:
 
         Args:
             location_metadata: Location metadata with time series references
+                             and organization_id
             target_date: Date to fetch data for
 
         Returns:
             Dictionary with data for each sensor type
         """
         self.logger.info(f"Fetching daily data for {target_date.date()}")
+
+        # Get organization ID from metadata
+        organization_id = location_metadata.get("organization_id")
 
         # Define date range (full day)
         start_date = target_date.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -135,7 +138,8 @@ class DataFetcher:
             data["temperature"] = self.fetch_time_series_data(
                 location_metadata["temperature_ts"],
                 start_date,
-                end_date
+                end_date,
+                organization_id
             )
 
         # Humidity
@@ -143,7 +147,8 @@ class DataFetcher:
             data["humidity"] = self.fetch_time_series_data(
                 location_metadata["humidity_ts"],
                 start_date,
-                end_date
+                end_date,
+                organization_id
             )
 
         # Wind speed
@@ -151,7 +156,8 @@ class DataFetcher:
             data["wind_speed"] = self.fetch_time_series_data(
                 location_metadata["wind_speed_ts"],
                 start_date,
-                end_date
+                end_date,
+                organization_id
             )
 
         # Air pressure
@@ -159,7 +165,8 @@ class DataFetcher:
             data["air_pressure"] = self.fetch_time_series_data(
                 location_metadata["air_pressure_ts"],
                 start_date,
-                end_date
+                end_date,
+                organization_id
             )
 
         # Sunshine hours (optional)
@@ -167,7 +174,8 @@ class DataFetcher:
             data["sunshine_hours"] = self.fetch_time_series_data(
                 location_metadata["sunshine_hours_ts"],
                 start_date,
-                end_date
+                end_date,
+                organization_id
             )
 
         # Global radiation (optional, for calculating sunshine hours)
@@ -175,7 +183,8 @@ class DataFetcher:
             data["global_radiation"] = self.fetch_time_series_data(
                 location_metadata["global_radiation_ts"],
                 start_date,
-                end_date
+                end_date,
+                organization_id
             )
 
         # Log data availability

@@ -68,22 +68,15 @@ class LakeEvaporationApp:
         self.logger.info("Logging in to KISTERS Web Portal...")
         self.api_client.login()
 
-        # Get organization ID
-        organization_id = self.config.api_organization_id
-        if not organization_id:
-            raise ValueError("Organization ID is required in configuration")
-
-        # Discovery
+        # Discovery (works across all organizations)
         self.discovery = TimeSeriesDiscovery(
             api_client=self.api_client,
-            organization_id=organization_id,
             logger=self.logger
         )
 
         # Data Fetcher
         self.data_fetcher = DataFetcher(
             api_client=self.api_client,
-            organization_id=organization_id,
             logger=self.logger
         )
 
@@ -104,7 +97,6 @@ class LakeEvaporationApp:
         # Writer
         self.writer = DataWriter(
             api_client=self.api_client,
-            organization_id=organization_id,
             logger=self.logger
         )
 
@@ -137,8 +129,16 @@ class LakeEvaporationApp:
             self.logger.info(f"Calculating evaporation for: {target_date.date()}")
 
             # Discover all lake evaporation locations
+            # If organization_id is configured, limit search to that org
+            # Otherwise, search across all organizations
+            organization_id = self.config.api_organization_id
+            if organization_id:
+                self.logger.info(f"Limiting search to organization: {organization_id}")
+
             with LoggerContext(self.logger, "location discovery"):
-                locations = self.discovery.get_all_evaporation_locations()
+                locations = self.discovery.get_all_evaporation_locations(
+                    organization_id=organization_id
+                )
 
             if not locations:
                 self.logger.warning("No lake evaporation locations found")
@@ -265,6 +265,7 @@ class LakeEvaporationApp:
             "date": target_date,
             "evaporation": evaporation,
             "location_name": location_name,
+            "organization_id": location.get("organization_id"),
             "metadata": self.writer.create_write_metadata(aggregates, location)
         }
 

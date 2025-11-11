@@ -284,6 +284,26 @@ class APIClient:
         response = self._make_request("PUT", endpoint, json=data)
         return response.json()
 
+    def get_organizations(self) -> List[Dict[str, Any]]:
+        """
+        Get list of all organizations the user has access to.
+
+        Note: The specific endpoint for this may need to be verified
+        against the KISTERS API documentation.
+
+        Returns:
+            List of organization objects
+        """
+        self.logger.info("Fetching organizations")
+        # TODO: Verify the actual endpoint for getting organizations
+        endpoint = "/organizations"
+        result = self.get(endpoint)
+
+        # API might return a list or dict with organizations
+        if isinstance(result, list):
+            return result
+        return result.get("organizations", [])
+
     def get_locations(
         self,
         organization_id: str,

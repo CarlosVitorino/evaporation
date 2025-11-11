@@ -15,7 +15,6 @@ class TimeSeriesDiscovery:
     def __init__(
         self,
         api_client: APIClient,
-        organization_id: str,
         logger: Optional[logging.Logger] = None
     ):
         """
@@ -23,62 +22,54 @@ class TimeSeriesDiscovery:
 
         Args:
             api_client: API client instance
-            organization_id: Organization ID to work with
             logger: Logger instance
         """
         self.api_client = api_client
-        self.organization_id = organization_id
         self.logger = logger or logging.getLogger(__name__)
 
     def discover_lake_evaporation_series(
         self,
-        tag: str = "lakeEvaporation"
+        organization_id: str
     ) -> List[Dict[str, Any]]:
         """
-        Discover all time series with lake evaporation tag.
+        Discover all time series with lake evaporation metadata for a specific organization.
+
+        The logic is:
+        1. Get all locations in the organization
+        2. For each location, get all timeseries
+        3. Filter timeseries that have "lakeEvaporation" in their metadata
 
         Args:
-            tag: Tag to search for
+            organization_id: Organization ID to search in
 
         Returns:
-            List of time series with metadata
+            List of time series with lakeEvaporation metadata
         """
         self.logger.info(
-            f"Discovering time series with tag '{tag}' in org {self.organization_id}"
+            f"Discovering time series with lakeEvaporation metadata in org {organization_id}"
         )
 
         try:
-            # Get all locations with the tag
-            locations = self.api_client.get_locations(
-                organization_id=self.organization_id,
-                tags=tag,
-                include_geometry=False
+            # Get all timeseries for this organization (with location data)
+            all_timeseries = self.api_client.get_time_series_list(
+                organization_id=organization_id,
+                include_location_data=True,
+                include_coverage=True
             )
 
-            self.logger.info(f"Found {len(locations)} locations with tag '{tag}'")
+            self.logger.info(f"Found {len(all_timeseries)} total timeseries in organization")
 
-            # For each location, get the timeseries
-            time_series_list = []
-            for location in locations:
-                location_id = location.get("id")
-                if not location_id:
-                    continue
+            # Filter timeseries that have lakeEvaporation metadata
+            lake_evap_series = []
+            for ts in all_timeseries:
+                metadata = ts.get("metadata", {})
+                if "lakeEvaporation" in metadata:
+                    lake_evap_series.append(ts)
 
-                # Get timeseries for this location
-                timeseries = self.api_client.get_time_series_list(
-                    organization_id=self.organization_id,
-                    location=location_id,
-                    include_location_data=True,
-                    include_coverage=True
-                )
-
-                # Add location data to each timeseries
-                for ts in timeseries:
-                    ts["location"] = location
-                    time_series_list.append(ts)
-
-            self.logger.info(f"Found {len(time_series_list)} time series total")
-            return time_series_list
+            self.logger.info(
+                f"Found {len(lake_evap_series)} timeseries with lakeEvaporation metadata"
+            )
+            return lake_evap_series
 
         except Exception as e:
             self.logger.error(f"Failed to discover time series: {e}")
@@ -88,15 +79,17 @@ class TimeSeriesDiscovery:
         """
         Extract and parse lake evaporation metadata from time series.
 
-        Expected metadata format in the new API:
+        Expected metadata format in OrganizationTimeseriesDTO:
         {
-            "lakeEvaporation": {
-                "Temps": "tsId(...) or tsPath(...) or exchangeId(...)",
-                "RHTs": "...",
-                "WSpeedTs": "...",
-                "AirPressureTs": "...",
-                "hoursOfSunshineTs": "...",
-                "globalRadiationTs": "..."
+            "metadata": {
+                "lakeEvaporation": {
+                    "Temps": "tsId(...) or tsPath(...) or exchangeId(...)",
+                    "RHTs": "...",
+                    "WSpeedTs": "...",
+                    "AirPressureTs": "...",
+                    "hoursOfSunshineTs": "...",
+                    "globalRadiationTs": "..."
+                }
             }
         }
 
@@ -115,15 +108,14 @@ class TimeSeriesDiscovery:
                 f"No lakeEvaporation metadata found in time series {time_series.get('id')}"
             )
 
-        # Extract location data (can be from embedded location data or separate location object)
-        location = time_series.get("location", {})
+        # Extract location data from embedded fields (includeLocationData=true)
         location_data = {
             "id": time_series.get("locationId"),
-            "name": time_series.get("locationName") or location.get("name"),
-            "latitude": time_series.get("locationLatitude") or location.get("latitude"),
-            "longitude": time_series.get("locationLongitude") or location.get("longitude"),
-            "elevation": time_series.get("locationElevation") or location.get("elevation"),
-            "geometry_type": time_series.get("locationGeometryType") or location.get("geometryType"),
+            "name": time_series.get("locationName"),
+            "latitude": time_series.get("locationLatitude"),
+            "longitude": time_series.get("locationLongitude"),
+            "elevation": time_series.get("locationElevation"),
+            "geometry_type": time_series.get("locationGeometryType"),
         }
 
         return {
@@ -138,27 +130,56 @@ class TimeSeriesDiscovery:
             "global_radiation_ts": lake_evap_metadata.get("globalRadiationTs"),
         }
 
-    def get_all_evaporation_locations(self) -> List[Dict[str, Any]]:
+    def get_all_evaporation_locations(
+        self,
+        organization_id: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         """
-        Get all lake evaporation locations for the configured organization.
+        Get all lake evaporation locations across all organizations or a specific one.
+
+        Args:
+            organization_id: Optional organization ID to limit search.
+                           If None, searches all organizations.
 
         Returns:
             List of locations with metadata
         """
-        self.logger.info(
-            f"Discovering all lake evaporation locations in org {self.organization_id}"
-        )
         all_locations = []
 
         try:
-            # Find lake evaporation time series
-            time_series_list = self.discover_lake_evaporation_series()
+            # Determine which organizations to search
+            if organization_id:
+                # Single organization
+                self.logger.info(
+                    f"Discovering lake evaporation locations in org {organization_id}"
+                )
+                organizations = [{"id": organization_id}]
+            else:
+                # All organizations
+                self.logger.info("Discovering lake evaporation locations across all organizations")
+                organizations = self.api_client.get_organizations()
+                self.logger.info(f"Found {len(organizations)} organizations")
 
-            # Extract metadata for each time series
-            for ts in time_series_list:
-                metadata = self.extract_metadata(ts)
-                metadata["organization_id"] = self.organization_id
-                all_locations.append(metadata)
+            # Process each organization
+            for org in organizations:
+                org_id = org.get("id")
+                org_name = org.get("name", org_id)
+
+                if not org_id:
+                    self.logger.warning(f"Organization {org_name} has no ID, skipping")
+                    continue
+
+                self.logger.info(f"Processing organization: {org_name} ({org_id})")
+
+                # Find lake evaporation time series in this organization
+                time_series_list = self.discover_lake_evaporation_series(org_id)
+
+                # Extract metadata for each time series
+                for ts in time_series_list:
+                    metadata = self.extract_metadata(ts)
+                    metadata["organization_id"] = org_id
+                    metadata["organization_name"] = org_name
+                    all_locations.append(metadata)
 
             self.logger.info(f"Total locations discovered: {len(all_locations)}")
             return all_locations

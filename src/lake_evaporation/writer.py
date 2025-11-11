@@ -16,7 +16,6 @@ class DataWriter:
     def __init__(
         self,
         api_client: APIClient,
-        organization_id: str,
         logger: Optional[logging.Logger] = None
     ):
         """
@@ -24,11 +23,9 @@ class DataWriter:
 
         Args:
             api_client: API client instance
-            organization_id: Organization ID to work with
             logger: Logger instance
         """
         self.api_client = api_client
-        self.organization_id = organization_id
         self.logger = logger or logging.getLogger(__name__)
 
     def write_evaporation_value(
@@ -36,7 +33,8 @@ class DataWriter:
         time_series_id: str,
         date: datetime,
         evaporation: float,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
+        organization_id: Optional[str] = None
     ) -> bool:
         """
         Write evaporation value to time series.
@@ -53,6 +51,7 @@ class DataWriter:
             date: Date the evaporation was calculated for
             evaporation: Evaporation value in mm/day
             metadata: Optional metadata (calculation details, source data, etc.)
+            organization_id: Organization ID (if required by API)
 
         Returns:
             True if successful, False otherwise
@@ -82,7 +81,7 @@ class DataWriter:
                 timestamp=timestamp.isoformat(),
                 value=evaporation,
                 metadata=write_metadata,
-                organization_id=self.organization_id
+                organization_id=organization_id
             )
 
             self.logger.debug(f"Write response: {response}")
@@ -101,7 +100,8 @@ class DataWriter:
 
         Args:
             results: Dictionary mapping time series IDs to result dictionaries
-                    containing 'date', 'evaporation', and optional 'metadata'
+                    containing 'date', 'evaporation', 'organization_id',
+                    and optional 'metadata'
 
         Returns:
             Dictionary mapping time series IDs to success status
@@ -114,7 +114,8 @@ class DataWriter:
                 time_series_id=ts_id,
                 date=result["date"],
                 evaporation=result["evaporation"],
-                metadata=result.get("metadata")
+                metadata=result.get("metadata"),
+                organization_id=result.get("organization_id")
             )
             status[ts_id] = success
 
