@@ -10,12 +10,9 @@ from pathlib import Path
 from typing import Optional
 
 from .core import Config, setup_logger, LoggerContext
-from .api import KistersAPI
-from .discovery import TimeSeriesDiscovery
-from .data_fetcher import DataFetcher
+from .api import KistersAPI, TimeSeriesDiscovery, DataFetcher, DataWriter
 from .processing import DataProcessor
 from .algorithms import EvaporationCalculator, SunshineCalculator
-from .writer import DataWriter
 
 
 class LakeEvaporationApp:

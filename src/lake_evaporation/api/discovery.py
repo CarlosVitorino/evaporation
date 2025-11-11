@@ -5,8 +5,10 @@ Finds time series with lake evaporation tag and extracts metadata.
 """
 
 import logging
-from typing import Dict, Any, List, Optional
-from .api import KistersAPI
+from typing import Dict, Any, List, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from . import KistersAPI
 
 
 class TimeSeriesDiscovery:
@@ -14,7 +16,7 @@ class TimeSeriesDiscovery:
 
     def __init__(
         self,
-        api_client: KistersAPI,
+        api_client: "KistersAPI",
         logger: Optional[logging.Logger] = None
     ):
         """

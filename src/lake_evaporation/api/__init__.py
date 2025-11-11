@@ -1,7 +1,8 @@
 """
 API layer for KISTERS Web Portal.
 
-Provides a unified client for authentication, locations, and time series operations.
+Provides a unified client for authentication, locations, time series operations,
+and higher-level services for data fetching, discovery, and writing.
 """
 
 import os
@@ -13,6 +14,9 @@ from .auth import AuthAPI
 from .locations import LocationsAPI
 from .timeseries import TimeSeriesAPI
 from . import helpers
+from .discovery import TimeSeriesDiscovery
+from .data_fetcher import DataFetcher
+from .writer import DataWriter
 
 
 class KistersAPI(AuthAPI, LocationsAPI, TimeSeriesAPI):
@@ -61,5 +65,8 @@ __all__ = [
     "LocationsAPI",
     "TimeSeriesAPI",
     "KistersAPI",
+    "TimeSeriesDiscovery",
+    "DataFetcher",
+    "DataWriter",
     "helpers",
 ]
