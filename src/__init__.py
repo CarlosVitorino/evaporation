@@ -1,1 +1,0 @@
-"""Lake Evaporation Estimation System"""

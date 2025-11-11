@@ -10,22 +10,6 @@ from typing import List, Dict, Any, Optional
 class LocationsAPI:
     """Mixin for location-related API operations."""
 
-    def get_organizations(self) -> List[Dict[str, Any]]:
-        """
-        Get list of all organizations the user has access to.
-
-        Returns:
-            List of organization objects
-        """
-        self.logger.info("Fetching organizations")  # type: ignore
-        endpoint = "/organizations"
-        result = self.get(endpoint)  # type: ignore
-
-        # API might return a list or dict with organizations
-        if isinstance(result, list):
-            return result
-        return result.get("organizations", [])
-
     def get_locations(
         self,
         organization_id: str,

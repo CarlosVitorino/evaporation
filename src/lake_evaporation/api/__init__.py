@@ -1,7 +1,7 @@
 """
 API layer for KISTERS Web Portal.
 
-Provides a unified client for authentication, locations, and time series operations.
+Provides low-level API client for authentication, organizations, locations, and time series operations.
 """
 
 import os
@@ -10,16 +10,17 @@ from typing import Optional
 
 from .client import APIClient
 from .auth import AuthAPI
+from .organizations import OrganizationsAPI
 from .locations import LocationsAPI
 from .timeseries import TimeSeriesAPI
 from . import helpers
 
 
-class KistersAPI(AuthAPI, LocationsAPI, TimeSeriesAPI):
+class KistersAPI(AuthAPI, OrganizationsAPI, LocationsAPI, TimeSeriesAPI):
     """
     Unified API client for KISTERS Web Portal.
 
-    Combines authentication, location, and time series operations.
+    Combines authentication, organization, location, and time series operations.
     """
 
     def __init__(
@@ -30,6 +31,7 @@ class KistersAPI(AuthAPI, LocationsAPI, TimeSeriesAPI):
         password: Optional[str] = None,
         timeout: int = 30,
         max_retries: int = 3,
+        verify_ssl: bool = True,
         logger: Optional[logging.Logger] = None
     ):
         """
@@ -42,6 +44,7 @@ class KistersAPI(AuthAPI, LocationsAPI, TimeSeriesAPI):
             password: Password for authentication
             timeout: Request timeout in seconds
             max_retries: Maximum number of retry attempts
+            verify_ssl: Whether to verify SSL certificates
             logger: Logger instance
         """
         super().__init__(
@@ -51,6 +54,7 @@ class KistersAPI(AuthAPI, LocationsAPI, TimeSeriesAPI):
             password=password,
             timeout=timeout,
             max_retries=max_retries,
+            verify_ssl=verify_ssl,
             logger=logger
         )
 
@@ -58,6 +62,7 @@ class KistersAPI(AuthAPI, LocationsAPI, TimeSeriesAPI):
 __all__ = [
     "APIClient",
     "AuthAPI",
+    "OrganizationsAPI",
     "LocationsAPI",
     "TimeSeriesAPI",
     "KistersAPI",

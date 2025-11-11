@@ -1,12 +1,14 @@
 """
-Time series discovery module.
+Time series discovery service.
 
 Finds time series with lake evaporation tag and extracts metadata.
 """
 
 import logging
-from typing import Dict, Any, List, Optional
-from .api import KistersAPI
+from typing import Dict, Any, List, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..api import KistersAPI
 
 
 class TimeSeriesDiscovery:
@@ -14,7 +16,7 @@ class TimeSeriesDiscovery:
 
     def __init__(
         self,
-        api_client: KistersAPI,
+        api_client: "KistersAPI",
         logger: Optional[logging.Logger] = None
     ):
         """
@@ -62,7 +64,7 @@ class TimeSeriesDiscovery:
             # Filter timeseries that have lakeEvaporation metadata
             lake_evap_series = []
             for ts in all_timeseries:
-                metadata = ts.get("metadata", {})
+                metadata = ts.get("metadata") or {}  # Handle None metadata
                 if "lakeEvaporation" in metadata:
                     lake_evap_series.append(ts)
 
@@ -100,8 +102,8 @@ class TimeSeriesDiscovery:
             Parsed metadata dictionary
         """
         # In the new API, metadata is a JsonNode
-        metadata = time_series.get("metadata", {})
-        lake_evap_metadata = metadata.get("lakeEvaporation", {})
+        metadata = time_series.get("metadata") or {}  # Handle None metadata
+        lake_evap_metadata = metadata.get("lakeEvaporation") or {}  # Handle None
 
         if not lake_evap_metadata:
             self.logger.warning(
@@ -130,16 +132,11 @@ class TimeSeriesDiscovery:
             "global_radiation_ts": lake_evap_metadata.get("globalRadiationTs"),
         }
 
-    def get_all_evaporation_locations(
-        self,
-        organization_id: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+    def get_all_evaporation_locations(self) -> List[Dict[str, Any]]:
         """
-        Get all lake evaporation locations across all organizations or a specific one.
+        Get all lake evaporation locations across all organizations.
 
-        Args:
-            organization_id: Optional organization ID to limit search.
-                           If None, searches all organizations.
+        Always fetches from all organizations that the user has access to.
 
         Returns:
             List of locations with metadata
@@ -147,18 +144,10 @@ class TimeSeriesDiscovery:
         all_locations = []
 
         try:
-            # Determine which organizations to search
-            if organization_id:
-                # Single organization
-                self.logger.info(
-                    f"Discovering lake evaporation locations in org {organization_id}"
-                )
-                organizations = [{"id": organization_id}]
-            else:
-                # All organizations
-                self.logger.info("Discovering lake evaporation locations across all organizations")
-                organizations = self.api_client.get_organizations()
-                self.logger.info(f"Found {len(organizations)} organizations")
+            # Fetch all organizations
+            self.logger.info("Discovering lake evaporation locations across all organizations")
+            organizations = self.api_client.get_organizations()
+            self.logger.info(f"Found {len(organizations)} organizations")
 
             # Process each organization
             for org in organizations:

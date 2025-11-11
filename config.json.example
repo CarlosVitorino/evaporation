@@ -5,9 +5,7 @@
     "organization_id": null,
     "timeout": 30,
     "max_retries": 3,
-    "_comments": {
-      "organization_id": "Optional: Set to a specific organization ID to limit search, or leave null to search all organizations"
-    }
+    "verify_ssl": true,
   },
   "authentication": {
     "username": "your_username_here",
