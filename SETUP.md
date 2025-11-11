@@ -46,12 +46,38 @@ Update the authentication section in `config.json`:
 pip install -r requirements.txt
 ```
 
-## 3. Test API Connection
+## 3. Run Tests
 
-Run the test script to verify your API credentials work:
+### Quick Test (No setup needed)
+
+Run the test suite to verify everything works:
 
 ```bash
-python test_api.py
+./run_tests.sh
+```
+
+Or run tests individually:
+
+```bash
+# Test calculation algorithms (no API needed)
+pytest tests/test_algorithms.py -v
+
+# Test data processing (no API needed)
+pytest tests/test_processing.py -v
+
+# Test full workflow (no API needed)
+pytest tests/test_integration.py -v
+
+# Test API connection (requires credentials)
+pytest tests/test_api_connection.py -v
+```
+
+### Test API Connection
+
+To test API connectivity, first set up credentials, then run:
+
+```bash
+pytest tests/test_api_connection.py -v
 ```
 
 This will:
@@ -61,10 +87,7 @@ This will:
 - ✓ Fetch time series
 - ✓ Check for lake evaporation metadata
 
-If successful, you'll see:
-```
-✓ All API tests passed successfully!
-```
+See `tests/README.md` for detailed test documentation.
 
 ## 4. Run the Application
 
@@ -153,16 +176,20 @@ lake-evaporation/
 4. **Check logs** - Review `logs/lake_evaporation.log` for details
 5. **Verify results** - Check that evaporation values were written back to the API
 
-## Quick Development Test
-
-For a quick test with hardcoded data (no API required):
+## Quick Test Commands
 
 ```bash
-# Run the algorithm test
-pytest tests/test_evaporation.py -v
+# Run all tests
+./run_tests.sh
 
-# Run the processor test
-pytest tests/test_processor.py -v
+# Run specific test categories
+pytest tests/test_algorithms.py -v      # Algorithm tests
+pytest tests/test_processing.py -v      # Data processing tests
+pytest tests/test_integration.py -v     # Integration tests
+pytest tests/test_api_connection.py -v  # API tests (requires credentials)
+
+# Run with coverage report
+pytest tests/ --cov=src/lake_evaporation --cov-report=html
 ```
 
-This verifies the calculation algorithms work correctly without needing API access.
+See `tests/README.md` for detailed test documentation.
