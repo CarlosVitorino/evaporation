@@ -6,8 +6,7 @@ Tests the Shuttleworth algorithm implementation.
 
 import pytest  # type: ignore
 from datetime import datetime
-from src.lake_evaporation.evaporation import EvaporationCalculator
-from src.lake_evaporation.shuttleworth import ShuttleworthCalculator
+from src.lake_evaporation.algorithms import EvaporationCalculator, ShuttleworthCalculator
 
 
 class TestEvaporationCalculator:

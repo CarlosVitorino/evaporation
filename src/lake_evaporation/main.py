@@ -9,14 +9,12 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
-from .config import Config
-from .logger import setup_logger, LoggerContext
-from .api_client import APIClient
+from .core import Config, setup_logger, LoggerContext
+from .api import KistersAPI
 from .discovery import TimeSeriesDiscovery
 from .data_fetcher import DataFetcher
-from .processor import DataProcessor
-from .evaporation import EvaporationCalculator
-from .sunshine import SunshineCalculator
+from .processing import DataProcessor
+from .algorithms import EvaporationCalculator, SunshineCalculator
 from .writer import DataWriter
 
 
@@ -41,7 +39,7 @@ class LakeEvaporationApp:
         self.logger.info(f"Configuration: {self.config}")
 
         # Initialize components (will be set in initialize_components)
-        self.api_client: Optional[APIClient] = None
+        self.api_client: Optional[KistersAPI] = None
         self.discovery: Optional[TimeSeriesDiscovery] = None
         self.data_fetcher: Optional[DataFetcher] = None
         self.processor: Optional[DataProcessor] = None
@@ -54,7 +52,7 @@ class LakeEvaporationApp:
         self.logger.info("Initializing components...")
 
         # API Client with new authentication
-        self.api_client = APIClient(
+        self.api_client = KistersAPI(
             base_url=self.config.api_base_url,
             username=self.config.auth_username,
             email=self.config.auth_email,
