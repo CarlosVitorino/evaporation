@@ -41,9 +41,6 @@ class Config:
         if os.getenv("API_BASE_URL"):
             self.config["api"]["base_url"] = os.getenv("API_BASE_URL")
 
-        if os.getenv("API_ORGANIZATION_ID"):
-            self.config["api"]["organization_id"] = os.getenv("API_ORGANIZATION_ID")
-
         # Authentication
         if os.getenv("API_USERNAME"):
             if "authentication" not in self.config:
@@ -92,16 +89,6 @@ class Config:
     def api_base_url(self) -> str:
         """Get API base URL."""
         return self.get("api.base_url", "")
-
-    @property
-    def api_organization_id(self) -> Optional[str]:
-        """
-        Get API organization ID (optional).
-
-        If not specified, the system will discover locations across all
-        organizations that the user has access to.
-        """
-        return self.get("api.organization_id")
 
     @property
     def api_timeout(self) -> int:

@@ -10,7 +10,8 @@ from pathlib import Path
 from typing import Optional
 
 from .core import Config, setup_logger, LoggerContext
-from .api import KistersAPI, TimeSeriesDiscovery, DataFetcher, DataWriter
+from .api import KistersAPI
+from .services import TimeSeriesDiscovery, DataFetcher, DataWriter
 from .processing import DataProcessor
 from .algorithms import EvaporationCalculator, SunshineCalculator
 
@@ -123,17 +124,9 @@ class LakeEvaporationApp:
             target_date = target_date.replace(hour=0, minute=0, second=0, microsecond=0)
             self.logger.info(f"Calculating evaporation for: {target_date.date()}")
 
-            # Discover all lake evaporation locations
-            # If organization_id is configured, limit search to that org
-            # Otherwise, search across all organizations
-            organization_id = self.config.api_organization_id
-            if organization_id:
-                self.logger.info(f"Limiting search to organization: {organization_id}")
-
+            # Discover all lake evaporation locations across all organizations
             with LoggerContext(self.logger, "location discovery"):
-                locations = self.discovery.get_all_evaporation_locations(
-                    organization_id=organization_id
-                )
+                locations = self.discovery.get_all_evaporation_locations()
 
             if not locations:
                 self.logger.warning("No lake evaporation locations found")

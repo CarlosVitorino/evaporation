@@ -1,5 +1,5 @@
 """
-Data fetching module for sensor measurements.
+Data fetching service for sensor measurements.
 
 Fetches time series data from the API for processing.
 """
@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional, List, TYPE_CHECKING
 from datetime import datetime, timedelta
 
 if TYPE_CHECKING:
-    from . import KistersAPI
+    from ..api import KistersAPI
 
 
 class DataFetcher:

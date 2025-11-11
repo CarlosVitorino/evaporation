@@ -1,5 +1,5 @@
 """
-Data writer module for writing evaporation results back to the API.
+Data writer service for writing evaporation results back to the API.
 
 Handles writing calculated evaporation values to time series.
 """
@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional, TYPE_CHECKING
 from datetime import datetime
 
 if TYPE_CHECKING:
-    from . import KistersAPI
+    from ..api import KistersAPI
 
 
 class DataWriter:
