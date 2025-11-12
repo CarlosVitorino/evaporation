@@ -27,9 +27,13 @@ class TimeSeriesDiscovery:
         self.api_client = api_client
         self.logger = logger or logging.getLogger(__name__)
 
+        # Cache for all timeseries (populated during discovery)
+        self._all_timeseries: List[Dict[str, Any]] = []
+
     def discover_lake_evaporation_series(
         self,
-        organization_id: str
+        organization_id: str,
+        store_all_timeseries: bool = True
     ) -> List[Dict[str, Any]]:
         """
         Discover all time series with lake evaporation metadata for a specific organization.
@@ -41,6 +45,8 @@ class TimeSeriesDiscovery:
 
         Args:
             organization_id: Organization ID to search in
+            store_all_timeseries: If True, stores all fetched timeseries in cache
+                                 for later use (e.g., building lookup maps)
 
         Returns:
             List of time series with lakeEvaporation metadata
@@ -58,6 +64,16 @@ class TimeSeriesDiscovery:
             )
 
             self.logger.info(f"Found {len(all_timeseries)} total timeseries in organization")
+
+            # Store in cache if requested
+            if store_all_timeseries:
+                # Extend the cache with these timeseries (avoiding duplicates by ID)
+                existing_ids = {ts.get("id") for ts in self._all_timeseries if ts.get("id")}
+                for ts in all_timeseries:
+                    ts_id = ts.get("id")
+                    if ts_id and ts_id not in existing_ids:
+                        self._all_timeseries.append(ts)
+                        existing_ids.add(ts_id)
 
             # Filter timeseries that have lakeEvaporation metadata
             lake_evap_series = []
@@ -187,6 +203,20 @@ class TimeSeriesDiscovery:
         except Exception as e:
             self.logger.error(f"Failed to discover locations: {e}")
             return []
+
+    def get_cached_timeseries(self) -> List[Dict[str, Any]]:
+        """
+        Get the cached timeseries list.
+
+        The timeseries list is populated during discovery (when calling
+        get_all_evaporation_locations). This method provides access to the
+        cached list for building lookup maps to resolve tsPath and exchangeId
+        references to their corresponding tsId values.
+
+        Returns:
+            List of all cached timeseries objects
+        """
+        return self._all_timeseries
 
     def validate_metadata(self, metadata: Dict[str, Any]) -> bool:
         """
