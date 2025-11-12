@@ -69,13 +69,7 @@ class TimeSeriesDiscovery:
 
             # Store in cache if requested
             if store_all_timeseries:
-                # Extend the cache with these timeseries (avoiding duplicates by ID)
-                existing_ids = {ts.get("id") for ts in self._all_timeseries if ts.get("id")}
-                for ts in all_timeseries:
-                    ts_id = ts.get("id")
-                    if ts_id and ts_id not in existing_ids:
-                        self._all_timeseries.append(ts)
-                        existing_ids.add(ts_id)
+               self._all_timeseries = all_timeseries;
 
             # Filter timeseries that have lakeEvaporation metadata
             lake_evap_series = []
@@ -157,7 +151,7 @@ class TimeSeriesDiscovery:
         Returns:
             List of time series with metadata
         """
-        all_timeseries = []
+        lake_evap_series = []
 
         try:
             # Fetch all organizations
@@ -177,17 +171,17 @@ class TimeSeriesDiscovery:
                 self.logger.info(f"Processing organization: {org_name} ({org_id})")
 
                 # Find lake evaporation time series in this organization
-                time_series_list = self.discover_lake_evaporation_series(org_id)
+                lake_evap_series_raw_list = self.discover_lake_evaporation_series(org_id)
 
                 # Extract metadata for each time series
-                for ts in time_series_list:
+                for ts in lake_evap_series_raw_list:
                     metadata = self.extract_metadata(ts)
                     metadata["organization_id"] = org_id
                     metadata["organization_name"] = org_name
-                    all_timeseries.append(metadata)
+                    lake_evap_series.append(metadata)
 
-            self.logger.info(f"Total time series discovered: {len(all_timeseries)}")
-            return all_timeseries
+            self.logger.info(f"Total time series discovered: {len(lake_evap_series)}")
+            return lake_evap_series
 
         except Exception as e:
             self.logger.error(f"Failed to discover time series: {e}")
