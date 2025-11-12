@@ -180,5 +180,5 @@ class AuthAPI(APIClient):
             try:
                 self.logout()
             except Exception as e:
-                self.logger.warning(f"Error during logout: {e}")
+                self.logger.warning(f"Error during logout: {e}", exc_info=True)
         super().close()

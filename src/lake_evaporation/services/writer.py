@@ -85,7 +85,7 @@ class DataWriter:
             return True
 
         except Exception as e:
-            self.logger.error(f"Failed to write evaporation value: {e}")
+            self.logger.error(f"Failed to write evaporation value: {e}", exc_info=True)
             return False
 
     def write_batch_values(

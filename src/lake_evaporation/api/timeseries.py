@@ -4,11 +4,23 @@ Time series operations for KISTERS Web Portal API.
 Handles retrieval and updating of time series data.
 """
 
+import logging
 from typing import List, Dict, Any, Optional
 
 
 class TimeSeriesAPI:
     """Time series-related API operations."""
+
+    # Type hints for attributes provided by APIClient base class
+    logger: logging.Logger
+
+    def get(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Any:
+        """Method provided by APIClient base class."""
+        ...
+
+    def post(self, endpoint: str, data: Optional[Dict[str, Any]] = None) -> Any:
+        """Method provided by APIClient base class."""
+        ...
 
     def get_time_series_list(
         self,
@@ -35,7 +47,7 @@ class TimeSeriesAPI:
         Returns:
             List of timeseries objects
         """
-        self.logger.info(f"Fetching timeseries for org {organization_id}")  # type: ignore
+        self.logger.info(f"Fetching timeseries for org {organization_id}")
         endpoint = f"/organizations/{organization_id}/timeSeries"
 
         params = {}
@@ -53,8 +65,7 @@ class TimeSeriesAPI:
         # Add any additional query parameters
         params.update(kwargs)
 
-        result = self.get(endpoint, params=params if params else None)  # type: ignore
-
+        result = self.get(endpoint, params=params if params else None)
         # API returns a list
         if isinstance(result, list):
             return result
@@ -81,7 +92,7 @@ class TimeSeriesAPI:
         Returns:
             Timeseries object
         """
-        self.logger.debug(f"Fetching timeseries {timeseries_id}")  # type: ignore
+        self.logger.debug(f"Fetching timeseries {timeseries_id}")
         endpoint = f"/organizations/{organization_id}/timeSeries/{timeseries_id}"
 
         params = {}
@@ -92,7 +103,7 @@ class TimeSeriesAPI:
         if include_timezone:
             params["includeTimeZone"] = "true"
 
-        return self.get(endpoint, params=params if params else None)  # type: ignore
+        return self.get(endpoint, params=params if params else None)
 
     def update_time_series(
         self,
@@ -111,9 +122,9 @@ class TimeSeriesAPI:
         Returns:
             Updated timeseries object
         """
-        self.logger.debug(f"Updating timeseries {timeseries_id}")  # type: ignore
+        self.logger.debug(f"Updating timeseries {timeseries_id}")
         endpoint = f"/organizations/{organization_id}/timeSeries/{timeseries_id}"
-        return self.put(endpoint, timeseries_data)  # type: ignore
+        return self.put(endpoint, timeseries_data)
 
     def get_time_series_data(
         self,
@@ -140,7 +151,7 @@ class TimeSeriesAPI:
             "from": start_date, 
             "to": end_date
         }
-        return self.get(endpoint, params=params)  # type: ignore
+        return self.get(endpoint, params=params)
 
     def write_time_series_value(
         self,

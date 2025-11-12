@@ -125,8 +125,11 @@ class DataFetcher:
             self.logger.debug(f"Retrieved {len(data_points)} data points")
             return data_points
 
+        except ValueError as e:
+            self.logger.error(f"Invalid time series reference {time_series_ref}: {e}")
+            return []
         except Exception as e:
-            self.logger.error(f"Failed to fetch data for {time_series_ref}: {e}")
+            self.logger.error(f"Failed to fetch data for {time_series_ref}: {e}", exc_info=True)
             return []
 
     def get_timeseries_unit(self, reference: str) -> Optional[str]:
