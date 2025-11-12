@@ -214,7 +214,7 @@ class LakeEvaporationApp:
 
         # Fetch daily data
         with LoggerContext(self.logger, f"data fetch for {location_name}"):
-            data = self.data_fetcher.fetch_daily_data(location, target_date)
+            data, actual_units = self.data_fetcher.fetch_daily_data(location, target_date)
 
         # Check data completeness
         if not self.data_fetcher.check_data_completeness(data):
@@ -225,9 +225,9 @@ class LakeEvaporationApp:
         with LoggerContext(self.logger, f"aggregation for {location_name}"):
             aggregates = self.processor.calculate_daily_aggregates(data)
 
-        # Convert units
+        # Convert units (use actual units from timeseries, fall back to config)
         source_units = self.config.get("units", {})
-        aggregates = self.processor.convert_units(aggregates, source_units)
+        aggregates = self.processor.convert_units(aggregates, source_units, actual_units)
 
         # Validate aggregates
         is_valid, errors = self.processor.validate_aggregates(aggregates)

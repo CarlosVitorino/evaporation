@@ -23,7 +23,8 @@ class UnitConverter:
     def convert_units(
         self,
         aggregates: Dict[str, float],
-        source_units: Dict[str, str]
+        source_units: Dict[str, str],
+        actual_units: Optional[Dict[str, str]] = None
     ) -> Dict[str, float]:
         """
         Convert aggregated values to required units.
@@ -37,7 +38,8 @@ class UnitConverter:
 
         Args:
             aggregates: Dictionary with aggregated values
-            source_units: Dictionary mapping field names to their source units
+            source_units: Dictionary mapping field names to their source units (fallback)
+            actual_units: Dictionary with actual units from timeseries (takes precedence)
 
         Returns:
             Dictionary with converted values
@@ -45,24 +47,38 @@ class UnitConverter:
         self.logger.info("Converting units")
         converted = aggregates.copy()
 
+        # Use actual units if provided, otherwise fall back to config units
+        if actual_units is None:
+            actual_units = {}
+
+        # Log which units are being used
+        if actual_units:
+            self.logger.debug(f"Using actual units from timeseries: {actual_units}")
+        else:
+            self.logger.debug(f"Using config units: {source_units}")
+
         # Temperature conversions
         for temp_field in ["t_min", "t_max"]:
             if temp_field in converted:
-                unit = source_units.get("temperature", "celsius")
+                # Use actual temperature unit from timeseries, or fall back to config
+                unit = actual_units.get("temperature") or source_units.get("temperature", "celsius")
+                self.logger.debug(f"Converting {temp_field} from {unit} to celsius")
                 converted[temp_field] = self.convert_temperature(
                     converted[temp_field], unit, "celsius"
                 )
 
         # Wind speed conversions
         if "wind_speed_avg" in converted:
-            unit = source_units.get("wind_speed", "km/h")
+            # Use actual wind speed unit from timeseries, or fall back to config
+            unit = actual_units.get("wind_speed") or source_units.get("wind_speed", "km/h")
             converted["wind_speed_avg"] = self.convert_wind_speed(
                 converted["wind_speed_avg"], unit, "km/h"
             )
 
         # Air pressure conversions
         if "air_pressure_avg" in converted:
-            unit = source_units.get("air_pressure", "kPa")
+            # Use actual air pressure unit from timeseries, or fall back to config
+            unit = actual_units.get("air_pressure") or source_units.get("air_pressure", "kPa")
             converted["air_pressure_avg"] = self.convert_pressure(
                 converted["air_pressure_avg"], unit, "kPa"
             )
