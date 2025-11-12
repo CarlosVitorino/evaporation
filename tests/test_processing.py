@@ -4,8 +4,9 @@ Tests for data processor module.
 Tests aggregation, unit conversion, and validation functionality.
 """
 
-import pytest
-from src.lake_evaporation.processor import DataProcessor
+import pytest  # type: ignore
+from src.lake_evaporation.processing import DataProcessor
+from src.lake_evaporation.processing.converter import UnitConverter
 
 
 class TestDataProcessor:
@@ -65,25 +66,25 @@ class TestDataProcessor:
     def test_temperature_conversion_celsius_to_fahrenheit(self, processor):
         """Test temperature conversion from Celsius to Fahrenheit."""
         celsius = 20.0
-        fahrenheit = processor._convert_temperature(celsius, "celsius", "fahrenheit")
+        fahrenheit = processor.converter.convert_temperature(celsius, "celsius", "fahrenheit")
         assert abs(fahrenheit - 68.0) < 0.01
 
     def test_temperature_conversion_fahrenheit_to_celsius(self, processor):
         """Test temperature conversion from Fahrenheit to Celsius."""
         fahrenheit = 68.0
-        celsius = processor._convert_temperature(fahrenheit, "fahrenheit", "celsius")
+        celsius = processor.converter.convert_temperature(fahrenheit, "fahrenheit", "celsius")
         assert abs(celsius - 20.0) < 0.01
 
     def test_wind_speed_conversion_kmh_to_ms(self, processor):
         """Test wind speed conversion from km/h to m/s."""
         kmh = 36.0
-        ms = processor._convert_wind_speed(kmh, "km/h", "m/s")
+        ms = processor.converter.convert_wind_speed(kmh, "km/h", "m/s")
         assert abs(ms - 10.0) < 0.01
 
     def test_pressure_conversion_kpa_to_hpa(self, processor):
         """Test pressure conversion from kPa to hPa."""
         kpa = 101.3
-        hpa = processor._convert_pressure(kpa, "kPa", "hPa")
+        hpa = processor.converter.convert_pressure(kpa, "kPa", "hPa")
         assert abs(hpa - 1013.0) < 0.1
 
     def test_validate_aggregates_valid(self, processor):

@@ -1,9 +1,16 @@
 {
   "environment": "dev",
   "api": {
-    "base_url": "https://api.datasphere.example.com",
+    "base_url": "https://vm-wcl-dst-web.kisters.de/KiWebPortalP3",
+    "organization_id": null,
     "timeout": 30,
-    "max_retries": 3
+    "max_retries": 3,
+    "verify_ssl": true,
+  },
+  "authentication": {
+    "username": "your_username_here",
+    "email": null,
+    "password": "your_password_here"
   },
   "processing": {
     "timezone": "UTC",

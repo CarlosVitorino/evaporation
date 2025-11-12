@@ -9,15 +9,11 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
-from .config import Config
-from .logger import setup_logger, LoggerContext
-from .api_client import APIClient
-from .discovery import TimeSeriesDiscovery
-from .data_fetcher import DataFetcher
-from .processor import DataProcessor
-from .evaporation import EvaporationCalculator
-from .sunshine import SunshineCalculator
-from .writer import DataWriter
+from .core import Config, setup_logger, LoggerContext
+from .api import KistersAPI
+from .services import TimeSeriesDiscovery, DataFetcher, DataWriter
+from .processing import DataProcessor
+from .algorithms import EvaporationCalculator, SunshineCalculator
 
 
 class LakeEvaporationApp:
@@ -40,28 +36,36 @@ class LakeEvaporationApp:
         self.logger.info("=" * 60)
         self.logger.info(f"Configuration: {self.config}")
 
-        # Initialize components
-        self.api_client = None
-        self.discovery = None
-        self.data_fetcher = None
-        self.processor = None
-        self.evaporation_calc = None
-        self.sunshine_calc = None
-        self.writer = None
+        # Initialize components (will be set in initialize_components)
+        self.api_client: Optional[KistersAPI] = None
+        self.discovery: Optional[TimeSeriesDiscovery] = None
+        self.data_fetcher: Optional[DataFetcher] = None
+        self.processor: Optional[DataProcessor] = None
+        self.evaporation_calc: Optional[EvaporationCalculator] = None
+        self.sunshine_calc: Optional[SunshineCalculator] = None
+        self.writer: Optional[DataWriter] = None
 
     def initialize_components(self) -> None:
         """Initialize all application components."""
         self.logger.info("Initializing components...")
 
-        # API Client
-        self.api_client = APIClient(
+        # API Client with new authentication
+        self.api_client = KistersAPI(
             base_url=self.config.api_base_url,
+            username=self.config.auth_username,
+            email=self.config.auth_email,
+            password=self.config.auth_password,
             timeout=self.config.api_timeout,
             max_retries=self.config.api_max_retries,
+            verify_ssl=self.config.api_verify_ssl,
             logger=self.logger
         )
 
-        # Discovery
+        # Login to the portal
+        self.logger.info("Logging in to KISTERS Web Portal...")
+        self.api_client.login()
+
+        # Discovery (works across all organizations)
         self.discovery = TimeSeriesDiscovery(
             api_client=self.api_client,
             logger=self.logger
@@ -105,6 +109,14 @@ class LakeEvaporationApp:
         try:
             # Initialize components
             self.initialize_components()
+            
+            # Ensure components are initialized
+            assert self.discovery is not None
+            assert self.data_fetcher is not None
+            assert self.processor is not None
+            assert self.evaporation_calc is not None
+            assert self.sunshine_calc is not None
+            assert self.writer is not None
 
             # Determine target date (previous day if not specified)
             if target_date is None:
@@ -113,26 +125,26 @@ class LakeEvaporationApp:
             target_date = target_date.replace(hour=0, minute=0, second=0, microsecond=0)
             self.logger.info(f"Calculating evaporation for: {target_date.date()}")
 
-            # Discover all lake evaporation locations
-            with LoggerContext(self.logger, "location discovery"):
-                locations = self.discovery.get_all_evaporation_locations()
+            # Discover all lake evaporation time series across all organizations
+            with LoggerContext(self.logger, "time series discovery"):
+                time_series_list = self.discovery.get_all_evaporation_timeseries()
 
-            if not locations:
-                self.logger.warning("No lake evaporation locations found")
+            if not time_series_list:
+                self.logger.warning("No lake evaporation time series found")
                 return
 
-            self.logger.info(f"Processing {len(locations)} locations")
+            self.logger.info(f"Processing {len(time_series_list)} time series")
 
-            # Process each location
+            # Process each time series
             results = {}
-            for location in locations:
+            for time_series in time_series_list:
                 try:
-                    result = self.process_location(location, target_date)
+                    result = self.process_location(time_series, target_date)
                     if result:
-                        results[location["time_series_id"]] = result
+                        results[time_series["time_series_id"]] = result
                 except Exception as e:
                     self.logger.error(
-                        f"Failed to process location {location.get('name')}: {e}",
+                        f"Failed to process time series {time_series.get('name')}: {e}",
                         exc_info=True
                     )
 
@@ -169,6 +181,14 @@ class LakeEvaporationApp:
         Returns:
             Result dictionary or None if processing failed
         """
+        # Ensure components are initialized
+        assert self.discovery is not None
+        assert self.data_fetcher is not None
+        assert self.processor is not None
+        assert self.evaporation_calc is not None
+        assert self.sunshine_calc is not None
+        assert self.writer is not None
+        
         location_name = location.get("name", "Unknown")
         self.logger.info(f"Processing location: {location_name}")
 
@@ -234,6 +254,7 @@ class LakeEvaporationApp:
             "date": target_date,
             "evaporation": evaporation,
             "location_name": location_name,
+            "organization_id": location.get("organization_id"),
             "metadata": self.writer.create_write_metadata(aggregates, location)
         }
 

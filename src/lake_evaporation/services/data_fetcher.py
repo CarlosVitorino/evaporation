@@ -1,19 +1,25 @@
 """
-Data fetching module for sensor measurements.
+Data fetching service for sensor measurements.
 
 Fetches time series data from the API for processing.
 """
 
 import logging
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, TYPE_CHECKING
 from datetime import datetime, timedelta
-from .api_client import APIClient
+
+if TYPE_CHECKING:
+    from ..api import KistersAPI
 
 
 class DataFetcher:
     """Fetch sensor data from time series."""
 
-    def __init__(self, api_client: APIClient, logger: Optional[logging.Logger] = None):
+    def __init__(
+        self,
+        api_client: "KistersAPI",
+        logger: Optional[logging.Logger] = None
+    ):
         """
         Initialize data fetcher.
 
@@ -28,7 +34,8 @@ class DataFetcher:
         self,
         time_series_ref: str,
         start_date: datetime,
-        end_date: datetime
+        end_date: datetime,
+        organization_id: str
     ) -> List[Dict[str, Any]]:
         """
         Fetch data for a time series reference.
@@ -37,6 +44,7 @@ class DataFetcher:
             time_series_ref: Time series reference (tsId, tsPath, or exchangeId)
             start_date: Start date for data fetch
             end_date: End date for data fetch
+            organization_id: Organization ID
 
         Returns:
             List of data points with timestamps and values
@@ -47,17 +55,29 @@ class DataFetcher:
             # Extract actual time series ID from reference
             ts_id = self._parse_time_series_reference(time_series_ref)
 
+            # Format dates as ISO strings (KISTERS expects this format)
+            start_iso = start_date.strftime("%Y-%m-%dT%H:%M:%S")
+            end_iso = end_date.strftime("%Y-%m-%dT%H:%M:%S")
+
             # Fetch data from API
             data = self.api_client.get_time_series_data(
                 time_series_id=ts_id,
-                start_date=start_date.isoformat(),
-                end_date=end_date.isoformat()
+                start_date=start_iso,
+                end_date=end_iso,
+                organization_id=organization_id
             )
 
-            # Extract data points
-            data_points = data.get("data", [])
-            self.logger.debug(f"Retrieved {len(data_points)} data points")
+            # Extract data points from response
+            # API may return: {"data": [...]} or just [...]
+            if isinstance(data, dict):
+                data_points = data.get("data", [])
+            elif isinstance(data, list):
+                data_points = data
+            else:
+                self.logger.warning(f"Unexpected data format: {type(data)}")
+                data_points = []
 
+            self.logger.debug(f"Retrieved {len(data_points)} data points")
             return data_points
 
         except Exception as e:
@@ -103,6 +123,7 @@ class DataFetcher:
 
         Args:
             location_metadata: Location metadata with time series references
+                             and organization_id
             target_date: Date to fetch data for
 
         Returns:
@@ -110,9 +131,17 @@ class DataFetcher:
         """
         self.logger.info(f"Fetching daily data for {target_date.date()}")
 
+        # Get organization ID from metadata
+        organization_id = location_metadata.get("organization_id")
+
+        if not organization_id:
+            self.logger.error("Organization ID is missing in location metadata")
+            raise ValueError("Organization ID is required")
+
         # Define date range (full day)
         start_date = target_date.replace(hour=0, minute=0, second=0, microsecond=0)
-        end_date = start_date + timedelta(days=1)
+        # End date should be end of day (23:59:59)
+        end_date = start_date.replace(hour=23, minute=59, second=59)
 
         # Fetch data for each required time series
         data = {}
@@ -122,7 +151,8 @@ class DataFetcher:
             data["temperature"] = self.fetch_time_series_data(
                 location_metadata["temperature_ts"],
                 start_date,
-                end_date
+                end_date,
+                organization_id
             )
 
         # Humidity
@@ -130,7 +160,8 @@ class DataFetcher:
             data["humidity"] = self.fetch_time_series_data(
                 location_metadata["humidity_ts"],
                 start_date,
-                end_date
+                end_date,
+                organization_id
             )
 
         # Wind speed
@@ -138,7 +169,8 @@ class DataFetcher:
             data["wind_speed"] = self.fetch_time_series_data(
                 location_metadata["wind_speed_ts"],
                 start_date,
-                end_date
+                end_date,
+                organization_id
             )
 
         # Air pressure
@@ -146,7 +178,8 @@ class DataFetcher:
             data["air_pressure"] = self.fetch_time_series_data(
                 location_metadata["air_pressure_ts"],
                 start_date,
-                end_date
+                end_date,
+                organization_id
             )
 
         # Sunshine hours (optional)
@@ -154,7 +187,8 @@ class DataFetcher:
             data["sunshine_hours"] = self.fetch_time_series_data(
                 location_metadata["sunshine_hours_ts"],
                 start_date,
-                end_date
+                end_date,
+                organization_id
             )
 
         # Global radiation (optional, for calculating sunshine hours)
@@ -162,7 +196,8 @@ class DataFetcher:
             data["global_radiation"] = self.fetch_time_series_data(
                 location_metadata["global_radiation_ts"],
                 start_date,
-                end_date
+                end_date,
+                organization_id
             )
 
         # Log data availability
