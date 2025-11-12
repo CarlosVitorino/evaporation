@@ -210,7 +210,7 @@ class LakeEvaporationApp:
             self.logger.error(f"Incomplete data for {location_name}")
             return None
 
-        # Calculate daily aggregates
+        # Calculate daily aggregates (min, max, mean)
         with LoggerContext(self.logger, f"aggregation for {location_name}"):
             aggregates = self.processor.calculate_daily_aggregates(data)
 

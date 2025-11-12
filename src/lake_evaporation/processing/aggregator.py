@@ -23,13 +23,14 @@ class DataAggregator:
 
     def calculate_daily_aggregates(
         self,
-        data: Dict[str, List[Dict[str, Any]]]
+        data: Dict[str, List[List[Any]]]
     ) -> Dict[str, float]:
         """
         Calculate daily aggregates from raw sensor data.
 
         Args:
-            data: Dictionary with sensor data lists
+            data: Dictionary with sensor data lists.
+                  Each list contains [timestamp, value] pairs.
 
         Returns:
             Dictionary with aggregated values:
@@ -46,7 +47,8 @@ class DataAggregator:
 
         # Temperature aggregates
         if "temperature" in data and data["temperature"]:
-            temps = [point["value"] for point in data["temperature"] if point.get("value") is not None]
+            # Each point is [timestamp, value]
+            temps = [point[1] for point in data["temperature"] if len(point) > 1 and point[1] is not None]
             if temps:
                 aggregates["t_min"] = min(temps)
                 aggregates["t_max"] = max(temps)
@@ -56,7 +58,7 @@ class DataAggregator:
 
         # Humidity aggregates
         if "humidity" in data and data["humidity"]:
-            rh = [point["value"] for point in data["humidity"] if point.get("value") is not None]
+            rh = [point[1] for point in data["humidity"] if len(point) > 1 and point[1] is not None]
             if rh:
                 aggregates["rh_min"] = min(rh)
                 aggregates["rh_max"] = max(rh)
@@ -66,7 +68,7 @@ class DataAggregator:
 
         # Wind speed average
         if "wind_speed" in data and data["wind_speed"]:
-            wind = [point["value"] for point in data["wind_speed"] if point.get("value") is not None]
+            wind = [point[1] for point in data["wind_speed"] if len(point) > 1 and point[1] is not None]
             if wind:
                 aggregates["wind_speed_avg"] = statistics.mean(wind)
                 self.logger.debug(f"Wind speed avg: {aggregates['wind_speed_avg']:.2f}")
@@ -75,7 +77,7 @@ class DataAggregator:
 
         # Air pressure average
         if "air_pressure" in data and data["air_pressure"]:
-            pressure = [point["value"] for point in data["air_pressure"] if point.get("value") is not None]
+            pressure = [point[1] for point in data["air_pressure"] if len(point) > 1 and point[1] is not None]
             if pressure:
                 aggregates["air_pressure_avg"] = statistics.mean(pressure)
                 self.logger.debug(f"Air pressure avg: {aggregates['air_pressure_avg']:.2f}")
@@ -84,9 +86,9 @@ class DataAggregator:
 
         # Sunshine hours (if directly measured)
         if "sunshine_hours" in data and data["sunshine_hours"]:
-            sunshine = [point["value"] for point in data["sunshine_hours"] if point.get("value") is not None]
+            sunshine = [point[1] for point in data["sunshine_hours"] if len(point) > 1 and point[1] is not None]
             if sunshine:
-                # Sum or average depending on how it's measured
+                # Sum for total daily sunshine hours
                 aggregates["sunshine_hours"] = sum(sunshine)
                 self.logger.debug(f"Sunshine hours: {aggregates['sunshine_hours']:.2f}")
 

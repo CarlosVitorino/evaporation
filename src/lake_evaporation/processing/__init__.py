@@ -33,7 +33,7 @@ class DataProcessor:
 
     def calculate_daily_aggregates(
         self,
-        data: Dict[str, List[Dict[str, Any]]]
+        data: Dict[str, List[List[Any]]]
     ) -> Dict[str, float]:
         """
         Calculate daily aggregates from raw sensor data.
