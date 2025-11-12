@@ -5,7 +5,7 @@ Fetches time series data from the API for processing.
 """
 
 import logging
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Dict, Any, Optional, List, Tuple, TYPE_CHECKING
 from datetime import datetime, timedelta
 
 if TYPE_CHECKING:
