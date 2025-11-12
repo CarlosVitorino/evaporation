@@ -9,6 +9,7 @@ import logging
 from typing import Dict, Any, Optional
 from datetime import datetime
 
+from ..core import constants
 from .shuttleworth import ShuttleworthCalculator, EvaporationComponents
 
 
@@ -41,7 +42,7 @@ class EvaporationCalculator:
         latitude: float,
         altitude: float,
         day_number: int,
-        albedo: float = 0.23
+        albedo: float = constants.DEFAULT_ALBEDO
     ) -> float:
         """
         Calculate daily lake evaporation using Shuttleworth algorithm.
@@ -91,7 +92,7 @@ class EvaporationCalculator:
         aggregates: Dict[str, float],
         location_metadata: Dict[str, Any],
         date: datetime,
-        albedo: float = 0.23
+        albedo: float = constants.DEFAULT_ALBEDO
     ) -> float:
         """
         Calculate evaporation with aggregated data and location metadata.
@@ -152,7 +153,7 @@ class EvaporationCalculator:
         latitude: float,
         altitude: float,
         day_number: int,
-        albedo: float = 0.23
+        albedo: float = constants.DEFAULT_ALBEDO
     ) -> EvaporationComponents:
         """
         Calculate evaporation with detailed intermediate components.

@@ -109,8 +109,11 @@ class DataFetcher:
 
             return data_points
 
+        except ValueError as e:
+            self.logger.error(f"Invalid time series reference {time_series_ref}: {e}")
+            return []
         except Exception as e:
-            self.logger.error(f"Failed to fetch data for {time_series_ref}: {e}")
+            self.logger.error(f"Failed to fetch data for {time_series_ref}: {e}", exc_info=True)
             return []
 
     def _parse_time_series_reference(self, reference: str) -> str:

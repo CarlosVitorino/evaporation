@@ -9,6 +9,8 @@ import os
 from typing import Dict, Any, Optional
 from pathlib import Path
 
+from . import constants
+
 
 class Config:
     """Configuration manager for the application."""
@@ -25,6 +27,7 @@ class Config:
         self.config: Dict[str, Any] = {}
         self._load_config()
         self._override_from_env()
+        self._validate_config()
 
     def _load_config(self) -> None:
         """Load configuration from JSON file."""
@@ -63,6 +66,50 @@ class Config:
         # Environment
         if os.getenv("ENVIRONMENT"):
             self.config["environment"] = os.getenv("ENVIRONMENT")
+
+    def _validate_config(self) -> None:
+        """Validate that required configuration keys are present."""
+        required_config = {
+            "api": ["base_url", "timeout", "max_retries"],
+            "authentication": [],  # Either username or email is required, validated below
+            "processing": ["timezone", "run_hour"],
+        }
+
+        # Validate required sections
+        missing_sections = []
+        for section in required_config.keys():
+            if section not in self.config:
+                missing_sections.append(section)
+
+        if missing_sections:
+            raise ValueError(
+                f"Missing required configuration sections: {', '.join(missing_sections)}"
+            )
+
+        # Validate required keys within sections
+        missing_keys = []
+        for section, keys in required_config.items():
+            if section not in self.config:
+                continue
+            for key in keys:
+                if key not in self.config[section]:
+                    missing_keys.append(f"{section}.{key}")
+
+        if missing_keys:
+            raise ValueError(
+                f"Missing required configuration keys: {', '.join(missing_keys)}"
+            )
+
+        # Validate authentication: either username or email must be present
+        auth = self.config.get("authentication", {})
+        if not auth.get("username") and not auth.get("email"):
+            raise ValueError(
+                "Authentication configuration must include either 'username' or 'email'"
+            )
+
+        # Validate that password is present
+        if not auth.get("password"):
+            raise ValueError("Authentication configuration must include 'password'")
 
     def get(self, key: str, default: Any = None) -> Any:
         """
@@ -146,7 +193,7 @@ class Config:
     @property
     def albedo(self) -> float:
         """Get albedo constant."""
-        return self.get("constants.albedo", 0.23)
+        return self.get("constants.albedo", constants.DEFAULT_ALBEDO)
 
     def __repr__(self) -> str:
         """String representation of config."""

@@ -18,6 +18,8 @@ import math
 from typing import Dict, Tuple
 from dataclasses import dataclass
 
+from ..core import constants
+
 
 # Physical Constants
 LATENT_HEAT_VAPORIZATION = 2.45  # MJ/kg
@@ -112,7 +114,7 @@ class ShuttleworthCalculator:
         latitude: float,
         altitude: float,
         day_number: int,
-        albedo: float = 0.23
+        albedo: float = constants.DEFAULT_ALBEDO
     ) -> float:
         """
         Calculate daily lake evaporation using the Shuttleworth algorithm.
@@ -160,7 +162,7 @@ class ShuttleworthCalculator:
         latitude: float,
         altitude: float,
         day_number: int,
-        albedo: float = 0.23
+        albedo: float = constants.DEFAULT_ALBEDO
     ) -> EvaporationComponents:
         """
         Calculate lake evaporation with detailed intermediate components.
@@ -563,7 +565,7 @@ def calculate_lake_evaporation(
     latitude: float,
     altitude: float,
     day_number: int,
-    albedo: float = 0.23
+    albedo: float = constants.DEFAULT_ALBEDO
 ) -> float:
     """
     Calculate daily lake evaporation using the Shuttleworth algorithm.

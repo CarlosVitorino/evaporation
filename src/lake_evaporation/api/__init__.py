@@ -12,7 +12,6 @@ from .client import APIClient
 from .auth import AuthAPI
 from .locations import LocationsAPI
 from .timeseries import TimeSeriesAPI
-from . import helpers
 
 
 class KistersAPI(AuthAPI, LocationsAPI, TimeSeriesAPI):
@@ -61,5 +60,4 @@ __all__ = [
     "LocationsAPI",
     "TimeSeriesAPI",
     "KistersAPI",
-    "helpers",
 ]
