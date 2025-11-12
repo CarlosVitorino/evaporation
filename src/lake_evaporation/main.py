@@ -125,26 +125,26 @@ class LakeEvaporationApp:
             target_date = target_date.replace(hour=0, minute=0, second=0, microsecond=0)
             self.logger.info(f"Calculating evaporation for: {target_date.date()}")
 
-            # Discover all lake evaporation locations across all organizations
-            with LoggerContext(self.logger, "location discovery"):
-                locations = self.discovery.get_all_evaporation_locations()
+            # Discover all lake evaporation time series across all organizations
+            with LoggerContext(self.logger, "time series discovery"):
+                time_series_list = self.discovery.get_all_evaporation_timeseries()
 
-            if not locations:
-                self.logger.warning("No lake evaporation locations found")
+            if not time_series_list:
+                self.logger.warning("No lake evaporation time series found")
                 return
 
-            self.logger.info(f"Processing {len(locations)} locations")
+            self.logger.info(f"Processing {len(time_series_list)} time series")
 
-            # Process each location
+            # Process each time series
             results = {}
-            for location in locations:
+            for time_series in time_series_list:
                 try:
-                    result = self.process_location(location, target_date)
+                    result = self.process_location(time_series, target_date)
                     if result:
-                        results[location["time_series_id"]] = result
+                        results[time_series["time_series_id"]] = result
                 except Exception as e:
                     self.logger.error(
-                        f"Failed to process location {location.get('name')}: {e}",
+                        f"Failed to process time series {time_series.get('name')}: {e}",
                         exc_info=True
                     )
 

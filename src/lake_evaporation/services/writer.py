@@ -35,8 +35,8 @@ class DataWriter:
         time_series_id: str,
         date: datetime,
         evaporation: float,
-        metadata: Optional[Dict[str, Any]] = None,
-        organization_id: Optional[str] = None
+        organization_id: str,
+        metadata: Optional[Dict[str, Any]] = None
     ) -> bool:
         """
         Write evaporation value to time series.
@@ -44,16 +44,12 @@ class DataWriter:
         The value is written at midnight of the previous day and is valid for
         the whole previous day.
 
-        Note: The KISTERS Web Portal API schema provided does not include
-        the data values writing endpoint. This method uses a placeholder endpoint
-        that may need to be updated based on the actual API documentation.
-
         Args:
             time_series_id: Time series ID to write to
             date: Date the evaporation was calculated for
             evaporation: Evaporation value in mm/day
+            organization_id: Organization ID
             metadata: Optional metadata (calculation details, source data, etc.)
-            organization_id: Organization ID (if required by API)
 
         Returns:
             True if successful, False otherwise
@@ -76,14 +72,13 @@ class DataWriter:
                 "algorithm": "Shuttleworth"
             })
 
-            # Write to API
-            # TODO: Update this based on actual KISTERS API data writing endpoint
+            # Write to API - timestamp in ISO format
             response = self.api_client.write_time_series_value(
                 time_series_id=time_series_id,
-                timestamp=timestamp.isoformat(),
+                timestamp=timestamp.strftime("%Y-%m-%dT%H:%M:%S"),
                 value=evaporation,
-                metadata=write_metadata,
-                organization_id=organization_id
+                organization_id=organization_id,
+                metadata=write_metadata
             )
 
             self.logger.debug(f"Write response: {response}")
@@ -112,12 +107,19 @@ class DataWriter:
         status = {}
 
         for ts_id, result in results.items():
+            if not all(k in result for k in ("date", "evaporation", "organization_id")):
+                self.logger.warning(
+                    f"Skipping time series {ts_id} due to missing required data"
+                )
+                status[ts_id] = False
+                continue
+
             success = self.write_evaporation_value(
                 time_series_id=ts_id,
                 date=result["date"],
                 evaporation=result["evaporation"],
+                organization_id=result["organization_id"],
                 metadata=result.get("metadata"),
-                organization_id=result.get("organization_id")
             )
             status[ts_id] = success
 

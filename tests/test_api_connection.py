@@ -7,8 +7,7 @@ These tests require valid credentials in .env or config.json.
 
 import pytest  # type: ignore
 import os
-from pathlib import Path
-import sys; sys.path.insert(0, '.'); 
+
 from src.lake_evaporation.core import Config
 from src.lake_evaporation.api import KistersAPI
 

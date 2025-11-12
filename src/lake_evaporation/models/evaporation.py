@@ -31,7 +31,7 @@ class LocationData:
     latitude: float
     longitude: float
     elevation: float
-    organization_id: Optional[str] = None
+    organization_id: str
     organization_name: Optional[str] = None
     # Time series references
     temperature_ts: Optional[str] = None
@@ -49,5 +49,5 @@ class EvaporationResult:
     date: datetime
     evaporation: float  # mm/day
     location_name: str
-    organization_id: Optional[str] = None
+    organization_id: str
     metadata: Optional[Dict[str, Any]] = None

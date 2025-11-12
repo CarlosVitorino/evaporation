@@ -14,9 +14,9 @@ class Location:
 
     id: str
     name: str
+    organization_id: str
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     elevation: Optional[float] = None
     geometry_type: Optional[str] = None
-    organization_id: Optional[str] = None
     tags: Optional[list] = None

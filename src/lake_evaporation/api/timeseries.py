@@ -120,25 +120,25 @@ class TimeSeriesAPI:
         time_series_id: str,
         start_date: str,
         end_date: str,
-        organization_id: Optional[str] = None
+        organization_id: str
     ) -> Dict[str, Any]:
         """
         Get time series data for a date range.
 
         Args:
             time_series_id: Time series ID
-            start_date: Start date (ISO format)
-            end_date: End date (ISO format)
-            organization_id: Organization ID (if required by API)
+            start_date: Start date (ISO format: 2025-11-10T00:00:00)
+            end_date: End date (ISO format: 2025-11-11T00:00:00)
+            organization_id: Organization ID
 
         Returns:
-            Time series data
+            Time series data with 'data' array containing timestamp/value pairs
         """
         self.logger.debug(f"Fetching data for time series {time_series_id}")  # type: ignore
-        endpoint = f"/timeseries/{time_series_id}/data"
+        endpoint = f"/organizations/{organization_id}/timeSeries/{time_series_id}/data"
         params = {
-            "start": start_date,
-            "end": end_date
+            "from": start_date, 
+            "to": end_date
         }
         return self.get(endpoint, params=params)  # type: ignore
 
@@ -147,8 +147,8 @@ class TimeSeriesAPI:
         time_series_id: str,
         timestamp: str,
         value: float,
+        organization_id: str,
         metadata: Optional[Dict[str, Any]] = None,
-        organization_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Write a value to a time series.
@@ -157,14 +157,15 @@ class TimeSeriesAPI:
             time_series_id: Time series ID
             timestamp: Timestamp (ISO format)
             value: Value to write
+            organization_id: Organization ID
             metadata: Optional metadata
-            organization_id: Organization ID (if required by API)
 
         Returns:
             Response from API
         """
         self.logger.debug(f"Writing value {value} to time series {time_series_id}")  # type: ignore
-        endpoint = f"/timeseries/{time_series_id}/data"
+        # Fix: Use correct path with capital S in timeSeries
+        endpoint = f"/organizations/{organization_id}/timeSeries/{time_series_id}/data"
         data = {
             "timestamp": timestamp,
             "value": value,

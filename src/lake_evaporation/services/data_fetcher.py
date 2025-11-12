@@ -35,20 +35,16 @@ class DataFetcher:
         time_series_ref: str,
         start_date: datetime,
         end_date: datetime,
-        organization_id: Optional[str] = None
+        organization_id: str
     ) -> List[Dict[str, Any]]:
         """
         Fetch data for a time series reference.
-
-        Note: The KISTERS Web Portal API schema provided does not include
-        the data values endpoint. This method uses a placeholder endpoint
-        that may need to be updated based on the actual API documentation.
 
         Args:
             time_series_ref: Time series reference (tsId, tsPath, or exchangeId)
             start_date: Start date for data fetch
             end_date: End date for data fetch
-            organization_id: Organization ID (if required by API)
+            organization_id: Organization ID
 
         Returns:
             List of data points with timestamps and values
@@ -59,19 +55,29 @@ class DataFetcher:
             # Extract actual time series ID from reference
             ts_id = self._parse_time_series_reference(time_series_ref)
 
+            # Format dates as ISO strings (KISTERS expects this format)
+            start_iso = start_date.strftime("%Y-%m-%dT%H:%M:%S")
+            end_iso = end_date.strftime("%Y-%m-%dT%H:%M:%S")
+
             # Fetch data from API
-            # TODO: Update this based on actual KISTERS API data endpoint
             data = self.api_client.get_time_series_data(
                 time_series_id=ts_id,
-                start_date=start_date.isoformat(),
-                end_date=end_date.isoformat(),
+                start_date=start_iso,
+                end_date=end_iso,
                 organization_id=organization_id
             )
 
-            # Extract data points
-            data_points = data.get("data", [])
-            self.logger.debug(f"Retrieved {len(data_points)} data points")
+            # Extract data points from response
+            # API may return: {"data": [...]} or just [...]
+            if isinstance(data, dict):
+                data_points = data.get("data", [])
+            elif isinstance(data, list):
+                data_points = data
+            else:
+                self.logger.warning(f"Unexpected data format: {type(data)}")
+                data_points = []
 
+            self.logger.debug(f"Retrieved {len(data_points)} data points")
             return data_points
 
         except Exception as e:
@@ -128,9 +134,14 @@ class DataFetcher:
         # Get organization ID from metadata
         organization_id = location_metadata.get("organization_id")
 
+        if not organization_id:
+            self.logger.error("Organization ID is missing in location metadata")
+            raise ValueError("Organization ID is required")
+
         # Define date range (full day)
         start_date = target_date.replace(hour=0, minute=0, second=0, microsecond=0)
-        end_date = start_date + timedelta(days=1)
+        # End date should be end of day (23:59:59)
+        end_date = start_date.replace(hour=23, minute=59, second=59)
 
         # Fetch data for each required time series
         data = {}

@@ -132,16 +132,16 @@ class TimeSeriesDiscovery:
             "global_radiation_ts": lake_evap_metadata.get("globalRadiationTs"),
         }
 
-    def get_all_evaporation_locations(self) -> List[Dict[str, Any]]:
+    def get_all_evaporation_timeseries(self) -> List[Dict[str, Any]]:
         """
-        Get all lake evaporation locations across all organizations.
+        Get all lake evaporation time series across all organizations.
 
         Always fetches from all organizations that the user has access to.
 
         Returns:
-            List of locations with metadata
+            List of time series with metadata
         """
-        all_locations = []
+        all_timeseries = []
 
         try:
             # Fetch all organizations
@@ -168,13 +168,13 @@ class TimeSeriesDiscovery:
                     metadata = self.extract_metadata(ts)
                     metadata["organization_id"] = org_id
                     metadata["organization_name"] = org_name
-                    all_locations.append(metadata)
+                    all_timeseries.append(metadata)
 
-            self.logger.info(f"Total locations discovered: {len(all_locations)}")
-            return all_locations
+            self.logger.info(f"Total time series discovered: {len(all_timeseries)}")
+            return all_timeseries
 
         except Exception as e:
-            self.logger.error(f"Failed to discover locations: {e}")
+            self.logger.error(f"Failed to discover time series: {e}")
             return []
 
     def validate_metadata(self, metadata: Dict[str, Any]) -> bool:
