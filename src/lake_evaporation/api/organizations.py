@@ -4,11 +4,22 @@ Organization operations for KISTERS Web Portal API.
 Handles retrieval of organizations.
 """
 
-from typing import List, Dict, Any
+import logging
+from typing import List, Dict, Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .client import APIClient
 
 
 class OrganizationsAPI:
     """Mixin for organization-related API operations."""
+
+    # Type hints for attributes provided by APIClient base class
+    logger: logging.Logger
+
+    def get(self, endpoint: str, params: Any = None) -> Any:
+        """Method provided by APIClient base class."""
+        ...
 
     def get_organizations(self) -> List[Dict[str, Any]]:
         """

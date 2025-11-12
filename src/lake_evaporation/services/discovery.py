@@ -90,7 +90,7 @@ class TimeSeriesDiscovery:
             return lake_evap_series
 
         except Exception as e:
-            self.logger.error(f"Failed to discover time series: {e}")
+            self.logger.error(f"Failed to discover time series: {e}", exc_info=True)
             return []
 
     def extract_metadata(self, time_series: Dict[str, Any]) -> Dict[str, Any]:
@@ -190,7 +190,7 @@ class TimeSeriesDiscovery:
             return lake_evap_series
 
         except Exception as e:
-            self.logger.error(f"Failed to discover time series: {e}")
+            self.logger.error(f"Failed to discover locations: {e}", exc_info=True)
             return []
 
     def get_cached_timeseries(self) -> List[Dict[str, Any]]:

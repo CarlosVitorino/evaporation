@@ -13,7 +13,6 @@ from .auth import AuthAPI
 from .organizations import OrganizationsAPI
 from .locations import LocationsAPI
 from .timeseries import TimeSeriesAPI
-from . import helpers
 
 
 class KistersAPI(AuthAPI, OrganizationsAPI, LocationsAPI, TimeSeriesAPI):
@@ -66,5 +65,4 @@ __all__ = [
     "LocationsAPI",
     "TimeSeriesAPI",
     "KistersAPI",
-    "helpers",
 ]

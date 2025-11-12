@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
-from .core import Config, setup_logger, LoggerContext
+from .core import Config, setup_logger, LoggerContext, constants
 from .api import KistersAPI
 from .services import TimeSeriesDiscovery, DataFetcher, DataWriter
 from .processing import DataProcessor
@@ -86,8 +86,8 @@ class LakeEvaporationApp:
         # Sunshine Calculator
         angstrom = self.config.get("constants.angstrom_prescott", {})
         self.sunshine_calc = SunshineCalculator(
-            a=angstrom.get("a", 0.25),
-            b=angstrom.get("b", 0.5),
+            a=angstrom.get("a", constants.DEFAULT_ANGSTROM_A),
+            b=angstrom.get("b", constants.DEFAULT_ANGSTROM_B),
             logger=self.logger
         )
 
@@ -110,12 +110,13 @@ class LakeEvaporationApp:
             # Initialize components
             self.initialize_components()
             
-            assert self.discovery is not None
-            assert self.data_fetcher is not None
-            assert self.processor is not None
-            assert self.evaporation_calc is not None
-            assert self.sunshine_calc is not None
-            assert self.writer is not None
+            # Type narrowing: assert components are initialized
+            assert self.discovery is not None, "Discovery service not initialized"
+            assert self.data_fetcher is not None, "Data fetcher not initialized"
+            assert self.processor is not None, "Processor not initialized"
+            assert self.evaporation_calc is not None, "Evaporation calculator not initialized"
+            assert self.sunshine_calc is not None, "Sunshine calculator not initialized"
+            assert self.writer is not None, "Writer not initialized"
 
             # Determine target date (previous day if not specified)
             if target_date is None:
@@ -185,14 +186,14 @@ class LakeEvaporationApp:
         Returns:
             Result dictionary or None if processing failed
         """
-        # Ensure components are initialized
-        assert self.discovery is not None
-        assert self.data_fetcher is not None
-        assert self.processor is not None
-        assert self.evaporation_calc is not None
-        assert self.sunshine_calc is not None
-        assert self.writer is not None
-        
+        # Type narrowing: assert components are initialized
+        assert self.discovery is not None, "Discovery service not initialized"
+        assert self.data_fetcher is not None, "Data fetcher not initialized"
+        assert self.processor is not None, "Processor not initialized"
+        assert self.evaporation_calc is not None, "Evaporation calculator not initialized"
+        assert self.sunshine_calc is not None, "Sunshine calculator not initialized"
+        assert self.writer is not None, "Writer not initialized"
+
         location_name = location.get("name", "Unknown")
         self.logger.info(f"Processing location: {location_name}")
 
