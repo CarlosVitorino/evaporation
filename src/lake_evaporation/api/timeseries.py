@@ -17,18 +17,11 @@ class TimeSeriesAPI:
     # Type hints for attributes provided by APIClient base class
     logger: logging.Logger
 
-    def get(self, endpoint: str, params: Any = None) -> Any:
+    def get(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Any:
         """Method provided by APIClient base class."""
         ...
 
     def put(self, endpoint: str, data: Any) -> Any:
-        """Method provided by APIClient base class."""
-        ...
-
-    # Type hints for attributes provided by APIClient base class
-    logger: logging.Logger
-
-    def get(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Any:
         """Method provided by APIClient base class."""
         ...
 
