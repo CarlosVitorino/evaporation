@@ -217,7 +217,7 @@ class DataFetcher:
         self,
         location_metadata: Dict[str, Any],
         target_date: datetime
-    ) -> Tuple[Dict[str, List[Dict[str, Any]]], Dict[str, str]]:
+    ) -> Tuple[Dict[str, List[List[Any]]], Dict[str, str]]:
         """
         Fetch all required sensor data for a specific day.
 
@@ -339,7 +339,7 @@ class DataFetcher:
 
     def check_data_completeness(
         self,
-        data: Dict[str, List[Dict[str, Any]]],
+        data: Dict[str, List[List[Any]]],
         required_fields: Optional[List[str]] = None
     ) -> bool:
         """

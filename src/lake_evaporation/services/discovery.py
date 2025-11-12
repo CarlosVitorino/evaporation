@@ -69,7 +69,13 @@ class TimeSeriesDiscovery:
 
             # Store in cache if requested
             if store_all_timeseries:
-               self._all_timeseries = all_timeseries;
+                # Extend the cache with these timeseries (avoiding duplicates by ID)
+                existing_ids = {ts.get("id") for ts in self._all_timeseries if ts.get("id")}
+                for ts in all_timeseries:
+                    ts_id = ts.get("id")
+                    if ts_id and ts_id not in existing_ids:
+                        self._all_timeseries.append(ts)
+                        existing_ids.add(ts_id)
 
             # Filter timeseries that have lakeEvaporation metadata
             lake_evap_series = []

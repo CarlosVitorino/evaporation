@@ -45,9 +45,8 @@ class DataAggregator:
         self.logger.info("Calculating daily aggregates")
         aggregates = {}
 
-        # Temperature aggregates
+        # Temperature aggregates - data points are [timestamp, value]
         if "temperature" in data and data["temperature"]:
-            # Each point is [timestamp, value]
             temps = [point[1] for point in data["temperature"] if len(point) > 1 and point[1] is not None]
             if temps:
                 aggregates["t_min"] = min(temps)

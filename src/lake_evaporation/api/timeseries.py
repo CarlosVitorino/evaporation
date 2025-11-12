@@ -166,9 +166,10 @@ class TimeSeriesAPI:
         self.logger.debug(f"Writing value {value} to time series {time_series_id}")  # type: ignore
         # Fix: Use correct path with capital S in timeSeries
         endpoint = f"/organizations/{organization_id}/timeSeries/{time_series_id}/data"
+
         data = {
-            "timestamp": timestamp,
-            "value": value,
-            "metadata": metadata or {}
+            "columns": ["timestamp", "value"],
+            "data": [[timestamp, value]]
         }
-        return self.post(endpoint, data)  # type: ignore
+
+        return self.put(endpoint, data)  # type: ignore

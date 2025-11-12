@@ -118,7 +118,7 @@ class EvaporationCalculator:
         # Extract location parameters
         location = location_metadata.get("location", {})
         latitude = location.get("latitude", 0)
-        altitude = location.get("altitude", 0)
+        altitude = location.get("elevation", 0)
 
         # Get day of year
         day_number = date.timetuple().tm_yday

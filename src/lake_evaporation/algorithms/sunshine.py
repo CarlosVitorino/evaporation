@@ -6,6 +6,7 @@ Estimates actual sunshine hours from global radiation measurements.
 
 import logging
 import math
+import statistics
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 
@@ -86,42 +87,38 @@ class SunshineCalculator:
 
     def calculate_from_data_points(
         self,
-        radiation_data: List[Dict[str, Any]],
+        radiation_data: List[List[Any]],
         latitude: float,
         day_number: int
     ) -> float:
         """
-        Calculate sunshine hours from time series of global radiation data.
+        Calculate sunshine hours from global radiation data points.
 
         Args:
-            radiation_data: List of radiation measurements with timestamps and values
-            latitude: Location latitude
-            day_number: Day of year
+            radiation_data: List of [timestamp, radiation_value] pairs in W/m²
+            latitude: Latitude in decimal degrees
+            day_number: Day of year (1-365)
 
         Returns:
-            Actual sunshine hours for the day
+            Estimated sunshine hours
         """
         if not radiation_data:
-            self.logger.warning("No radiation data available")
             return 0.0
 
-        # Sum or average radiation values depending on measurement type
-        # Assuming values are in W/m² and need to be converted to MJ/m²/day
-        # 1 W/m² over 1 day = 0.0864 MJ/m²/day
-
-        # Calculate average radiation (assuming instantaneous measurements)
-        radiation_values = [point["value"] for point in radiation_data if point.get("value") is not None]
-
+        # Extract radiation values (second element of each [timestamp, value] pair)
+        radiation_values = [point[1] for point in radiation_data if len(point) > 1 and point[1] is not None]
+        
         if not radiation_values:
-            self.logger.warning("No valid radiation values")
             return 0.0
 
-        avg_radiation_w = sum(radiation_values) / len(radiation_values)
+        # Calculate mean radiation for the day
+        mean_radiation = statistics.mean(radiation_values)
 
-        # Convert W/m² to MJ/m²/day
-        global_radiation = avg_radiation_w * 0.0864
-
-        return self.calculate_sunshine_hours(global_radiation, latitude, day_number)
+        return self.calculate_sunshine_hours(
+            mean_radiation,
+            latitude=latitude,
+            day_number=day_number
+        )
 
     def _calculate_extraterrestrial_radiation(
         self,

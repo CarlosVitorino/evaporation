@@ -101,17 +101,17 @@ class UnitConverter:
             return value
 
         # Convert to Celsius first
-        if from_unit.lower() in ["fahrenheit", "f"]:
+        if from_unit.lower() in ["fahrenheit", "f", "°f"]:
             celsius = (value - 32) * 5 / 9
-        elif from_unit.lower() in ["kelvin", "k"]:
+        elif from_unit.lower() in ["kelvin", "k", "°k"]:
             celsius = value - 273.15
         else:
             celsius = value
 
         # Convert from Celsius to target
-        if to_unit.lower() in ["fahrenheit", "f"]:
+        if to_unit.lower() in ["fahrenheit", "f", "°f"]:
             return celsius * 9 / 5 + 32
-        elif to_unit.lower() in ["kelvin", "k"]:
+        elif to_unit.lower() in ["kelvin", "k", "°k"]:
             return celsius + 273.15
         else:
             return celsius
