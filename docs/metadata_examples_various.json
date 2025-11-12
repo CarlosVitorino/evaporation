@@ -1,0 +1,196 @@
+{
+  "// Various examples of lake evaporation metadata configurations": "",
+
+  "example1_minimal": {
+    "// Minimal configuration with only required fields": "",
+    "// System uses defaults for everything else": "",
+    "metadata": {
+      "lakeEvaporation": {
+        "Temps": "tsId(12345)",
+        "RHTs": "tsId(12346)",
+        "WSpeedTs": "tsId(12347)",
+        "AirPressureTs": "tsId(12348)"
+      }
+    }
+  },
+
+  "example2_with_sunshine": {
+    "// Configuration with sunshine hours sensor": "",
+    "// Provides better accuracy than calculated sunshine": "",
+    "metadata": {
+      "lakeEvaporation": {
+        "Temps": "tsId(12345)",
+        "RHTs": "tsId(12346)",
+        "WSpeedTs": "tsId(12347)",
+        "AirPressureTs": "tsId(12348)",
+        "hoursOfSunshineTs": "tsId(12349)"
+      }
+    }
+  },
+
+  "example3_with_radiation": {
+    "// Configuration with global radiation": "",
+    "// System calculates sunshine hours using Ångström-Prescott": "",
+    "metadata": {
+      "lakeEvaporation": {
+        "Temps": "tsId(12345)",
+        "RHTs": "tsId(12346)",
+        "WSpeedTs": "tsId(12347)",
+        "AirPressureTs": "tsId(12348)",
+        "globalRadiationTs": "tsId(12350)"
+      }
+    }
+  },
+
+  "example4_using_paths": {
+    "// Using tsPath instead of tsId": "",
+    "// Useful for human-readable configuration": "",
+    "metadata": {
+      "lakeEvaporation": {
+        "Temps": "tsPath(/Brandenburg/Meteorology/Temperature_Daily)",
+        "RHTs": "tsPath(/Brandenburg/Meteorology/Humidity_Daily)",
+        "WSpeedTs": "tsPath(/Brandenburg/Meteorology/WindSpeed_Daily)",
+        "AirPressureTs": "tsPath(/Brandenburg/Meteorology/Pressure_Daily)",
+        "hoursOfSunshineTs": "tsPath(/Brandenburg/Meteorology/Sunshine_Daily)"
+      }
+    }
+  },
+
+  "example5_using_exchange_ids": {
+    "// Using exchangeId for external system integration": "",
+    "// Useful when data comes from external sources": "",
+    "metadata": {
+      "lakeEvaporation": {
+        "Temps": "exchangeId(DWD_TEMP_BRANDENBURG_DAILY)",
+        "RHTs": "exchangeId(DWD_HUM_BRANDENBURG_DAILY)",
+        "WSpeedTs": "exchangeId(DWD_WIND_BRANDENBURG_DAILY)",
+        "AirPressureTs": "exchangeId(DWD_PRES_BRANDENBURG_DAILY)",
+        "hoursOfSunshineTs": "exchangeId(DWD_SUN_BRANDENBURG_DAILY)"
+      }
+    }
+  },
+
+  "example6_complete_with_constants": {
+    "// Complete configuration with custom constants": "",
+    "// Useful for specific lake characteristics": "",
+    "metadata": {
+      "lakeEvaporation": {
+        "Temps": "tsId(12345)",
+        "RHTs": "tsId(12346)",
+        "WSpeedTs": "tsId(12347)",
+        "AirPressureTs": "tsId(12348)",
+        "hoursOfSunshineTs": "tsId(12349)",
+
+        "latitude": 52.4125,
+        "longitude": 12.5316,
+        "altitude": 32.5,
+
+        "albedo": 0.20,
+        "angstromA": 0.28,
+        "angstromB": 0.48,
+
+        "description": "Custom albedo for turbid water conditions",
+        "algorithm": "Shuttleworth",
+        "version": "1.0"
+      }
+    }
+  },
+
+  "example7_mountainous_region": {
+    "// Configuration for mountainous region": "",
+    "// Different altitude and Ångström coefficients": "",
+    "metadata": {
+      "lakeEvaporation": {
+        "Temps": "tsId(20001)",
+        "RHTs": "tsId(20002)",
+        "WSpeedTs": "tsId(20003)",
+        "AirPressureTs": "tsId(20004)",
+        "globalRadiationTs": "tsId(20005)",
+
+        "latitude": 47.5,
+        "longitude": 11.2,
+        "altitude": 1850.0,
+
+        "albedo": 0.23,
+        "angstromA": 0.30,
+        "angstromB": 0.55,
+
+        "description": "Alpine lake at 1850m altitude",
+        "notes": "Adjusted Ångström coefficients for high altitude conditions"
+      }
+    }
+  },
+
+  "example8_reservoir": {
+    "// Configuration for reservoir/dam": "",
+    "// May have different albedo due to water quality": "",
+    "metadata": {
+      "lakeEvaporation": {
+        "Temps": "tsId(30001)",
+        "RHTs": "tsId(30002)",
+        "WSpeedTs": "tsId(30003)",
+        "AirPressureTs": "tsId(30004)",
+        "hoursOfSunshineTs": "tsId(30005)",
+
+        "latitude": 50.8,
+        "longitude": 8.2,
+        "altitude": 245.0,
+
+        "albedo": 0.18,
+
+        "description": "Eder Dam reservoir evaporation monitoring",
+        "notes": "Lower albedo due to suspended sediments in reservoir water"
+      }
+    }
+  },
+
+  "example9_mixed_sensors": {
+    "// Configuration with sensors from different locations": "",
+    "// Use when lake doesn't have complete meteorological station": "",
+    "metadata": {
+      "lakeEvaporation": {
+        "Temps": "tsPath(/LakeStation/Temperature)",
+        "RHTs": "tsPath(/LakeStation/Humidity)",
+        "WSpeedTs": "tsPath(/NearbyAirport/WindSpeed)",
+        "AirPressureTs": "tsPath(/NearbyAirport/Pressure)",
+        "hoursOfSunshineTs": "tsPath(/RegionalStation/Sunshine)",
+
+        "description": "Mixed sensors from lake station and nearby facilities",
+        "notes": "Temperature and humidity from lake station, wind/pressure from airport 5km away"
+      }
+    }
+  },
+
+  "example10_with_validation_params": {
+    "// Configuration with additional validation parameters": "",
+    "// For quality control and data validation": "",
+    "metadata": {
+      "lakeEvaporation": {
+        "Temps": "tsId(40001)",
+        "RHTs": "tsId(40002)",
+        "WSpeedTs": "tsId(40003)",
+        "AirPressureTs": "tsId(40004)",
+        "hoursOfSunshineTs": "tsId(40005)",
+
+        "description": "Lake evaporation with quality control",
+        "algorithm": "Shuttleworth",
+        "version": "1.0",
+
+        "// Expected ranges for validation (not yet implemented)": "",
+        "validation": {
+          "minEvaporation": 0.0,
+          "maxEvaporation": 15.0,
+          "warnThreshold": 12.0,
+          "dataCompletenessRequired": 0.95
+        },
+
+        "// Calculation schedule": "",
+        "schedule": {
+          "frequency": "daily",
+          "runTime": "01:00",
+          "timezone": "Europe/Berlin"
+        }
+      }
+    }
+  }
+}
