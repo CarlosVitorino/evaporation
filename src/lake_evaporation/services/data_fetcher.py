@@ -5,7 +5,7 @@ Fetches time series data from the API for processing.
 """
 
 import logging
-from typing import Dict, Any, Optional, List, TYPE_CHECKING
+from typing import Dict, Any, Optional, List, Tuple, TYPE_CHECKING
 from datetime import datetime, timedelta
 
 if TYPE_CHECKING:
@@ -33,19 +33,21 @@ class DataFetcher:
         # Lookup maps for timeseries references
         self._path_to_id_map: Dict[str, str] = {}
         self._exchange_id_to_id_map: Dict[str, str] = {}
+        self._id_to_unit_map: Dict[str, str] = {}
 
     def set_timeseries_list(self, timeseries_list: List[Dict[str, Any]]) -> None:
         """
         Set the timeseries list and build lookup maps.
 
         This allows the data fetcher to resolve tsPath and exchangeId references
-        to their corresponding tsId values.
+        to their corresponding tsId values, and to retrieve unit information.
 
         Args:
             timeseries_list: List of timeseries objects from the API
         """
         self._path_to_id_map.clear()
         self._exchange_id_to_id_map.clear()
+        self._id_to_unit_map.clear()
 
         for ts in timeseries_list:
             ts_id = ts.get("id")
@@ -62,9 +64,15 @@ class DataFetcher:
             if exchange_id:
                 self._exchange_id_to_id_map[exchange_id] = ts_id
 
+            # Map ID to unit
+            unit = ts.get("unit")
+            if unit:
+                self._id_to_unit_map[ts_id] = unit
+
         self.logger.info(
             f"Built lookup maps: {len(self._path_to_id_map)} paths, "
-            f"{len(self._exchange_id_to_id_map)} exchange IDs"
+            f"{len(self._exchange_id_to_id_map)} exchange IDs, "
+            f"{len(self._id_to_unit_map)} units"
         )
 
     def fetch_time_series_data(
@@ -120,6 +128,23 @@ class DataFetcher:
         except Exception as e:
             self.logger.error(f"Failed to fetch data for {time_series_ref}: {e}")
             return []
+
+    def get_timeseries_unit(self, reference: str) -> Optional[str]:
+        """
+        Get the unit for a time series reference.
+
+        Args:
+            reference: Time series reference string (tsId, tsPath, or exchangeId)
+
+        Returns:
+            Unit string if found, None otherwise
+        """
+        try:
+            ts_id = self._parse_time_series_reference(reference)
+            return self._id_to_unit_map.get(ts_id)
+        except Exception as e:
+            self.logger.warning(f"Could not get unit for {reference}: {e}")
+            return None
 
     def _parse_time_series_reference(self, reference: str) -> str:
         """
@@ -192,7 +217,7 @@ class DataFetcher:
         self,
         location_metadata: Dict[str, Any],
         target_date: datetime
-    ) -> Dict[str, List[Dict[str, Any]]]:
+    ) -> Tuple[Dict[str, List[Dict[str, Any]]], Dict[str, str]]:
         """
         Fetch all required sensor data for a specific day.
 
@@ -202,7 +227,9 @@ class DataFetcher:
             target_date: Date to fetch data for
 
         Returns:
-            Dictionary with data for each sensor type
+            Tuple of (data dictionary, units dictionary)
+            - data: Dictionary with data for each sensor type
+            - units: Dictionary mapping sensor type to its unit
         """
         self.logger.info(f"Fetching daily data for {target_date.date()}")
 
@@ -220,69 +247,95 @@ class DataFetcher:
 
         # Fetch data for each required time series
         data = {}
+        units = {}
 
         # Temperature
         if location_metadata.get("temperature_ts"):
+            ts_ref = location_metadata["temperature_ts"]
             data["temperature"] = self.fetch_time_series_data(
-                location_metadata["temperature_ts"],
+                ts_ref,
                 start_date,
                 end_date,
                 organization_id
             )
+            unit = self.get_timeseries_unit(ts_ref)
+            if unit:
+                units["temperature"] = unit
 
         # Humidity
         if location_metadata.get("humidity_ts"):
+            ts_ref = location_metadata["humidity_ts"]
             data["humidity"] = self.fetch_time_series_data(
-                location_metadata["humidity_ts"],
+                ts_ref,
                 start_date,
                 end_date,
                 organization_id
             )
+            unit = self.get_timeseries_unit(ts_ref)
+            if unit:
+                units["humidity"] = unit
 
         # Wind speed
         if location_metadata.get("wind_speed_ts"):
+            ts_ref = location_metadata["wind_speed_ts"]
             data["wind_speed"] = self.fetch_time_series_data(
-                location_metadata["wind_speed_ts"],
+                ts_ref,
                 start_date,
                 end_date,
                 organization_id
             )
+            unit = self.get_timeseries_unit(ts_ref)
+            if unit:
+                units["wind_speed"] = unit
 
         # Air pressure
         if location_metadata.get("air_pressure_ts"):
+            ts_ref = location_metadata["air_pressure_ts"]
             data["air_pressure"] = self.fetch_time_series_data(
-                location_metadata["air_pressure_ts"],
+                ts_ref,
                 start_date,
                 end_date,
                 organization_id
             )
+            unit = self.get_timeseries_unit(ts_ref)
+            if unit:
+                units["air_pressure"] = unit
 
         # Sunshine hours (optional)
         if location_metadata.get("sunshine_hours_ts"):
+            ts_ref = location_metadata["sunshine_hours_ts"]
             data["sunshine_hours"] = self.fetch_time_series_data(
-                location_metadata["sunshine_hours_ts"],
+                ts_ref,
                 start_date,
                 end_date,
                 organization_id
             )
+            unit = self.get_timeseries_unit(ts_ref)
+            if unit:
+                units["sunshine_hours"] = unit
 
         # Global radiation (optional, for calculating sunshine hours)
         if location_metadata.get("global_radiation_ts"):
+            ts_ref = location_metadata["global_radiation_ts"]
             data["global_radiation"] = self.fetch_time_series_data(
-                location_metadata["global_radiation_ts"],
+                ts_ref,
                 start_date,
                 end_date,
                 organization_id
             )
+            unit = self.get_timeseries_unit(ts_ref)
+            if unit:
+                units["global_radiation"] = unit
 
         # Log data availability
         for sensor_type, sensor_data in data.items():
             if sensor_data:
-                self.logger.info(f"  {sensor_type}: {len(sensor_data)} data points")
+                unit_info = f" (unit: {units[sensor_type]})" if sensor_type in units else ""
+                self.logger.info(f"  {sensor_type}: {len(sensor_data)} data points{unit_info}")
             else:
                 self.logger.warning(f"  {sensor_type}: No data available")
 
-        return data
+        return data, units
 
     def check_data_completeness(
         self,
