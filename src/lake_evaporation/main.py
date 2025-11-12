@@ -141,6 +141,12 @@ class LakeEvaporationApp:
                 cached_timeseries = self.discovery.get_cached_timeseries()
                 self.data_fetcher.set_timeseries_list(cached_timeseries)
 
+            # Get cached timeseries for lookup (to resolve tsPath and exchangeId)
+            # These were already fetched during location discovery
+            with LoggerContext(self.logger, "timeseries lookup initialization"):
+                cached_timeseries = self.discovery.get_cached_timeseries()
+                self.data_fetcher.set_timeseries_list(cached_timeseries)
+
             # Process each location
             results = {}
             for time_series in time_series_list:
