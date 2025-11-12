@@ -135,7 +135,14 @@ class LakeEvaporationApp:
 
             self.logger.info(f"Processing {len(time_series_list)} time series")
 
-            # Process each time series
+            # Fetch all timeseries for lookup (to resolve tsPath and exchangeId)
+            with LoggerContext(self.logger, "timeseries lookup initialization"):
+                all_timeseries = self.discovery.get_all_timeseries(
+                    organization_id=organization_id
+                )
+                self.data_fetcher.set_timeseries_list(all_timeseries)
+
+            # Process each location
             results = {}
             for time_series in time_series_list:
                 try:

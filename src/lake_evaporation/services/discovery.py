@@ -177,6 +177,63 @@ class TimeSeriesDiscovery:
             self.logger.error(f"Failed to discover time series: {e}")
             return []
 
+    def get_all_timeseries(
+        self,
+        organization_id: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Get all timeseries across all organizations or a specific one.
+
+        This is useful for building lookup maps to resolve tsPath and exchangeId
+        references to their corresponding tsId values.
+
+        Args:
+            organization_id: Optional organization ID to limit search.
+                           If None, searches all organizations.
+
+        Returns:
+            List of all timeseries objects
+        """
+        all_timeseries = []
+
+        try:
+            # Determine which organizations to search
+            if organization_id:
+                # Single organization
+                self.logger.info(
+                    f"Fetching all timeseries for org {organization_id}"
+                )
+                organizations = [{"id": organization_id}]
+            else:
+                # All organizations
+                self.logger.info("Fetching timeseries across all organizations")
+                organizations = self.api_client.get_organizations()
+                self.logger.info(f"Found {len(organizations)} organizations")
+
+            # Fetch timeseries for each organization
+            for org in organizations:
+                org_id = org.get("id")
+                if not org_id:
+                    continue
+
+                org_timeseries = self.api_client.get_time_series_list(
+                    organization_id=org_id,
+                    include_location_data=False,
+                    include_coverage=False
+                )
+
+                all_timeseries.extend(org_timeseries)
+                self.logger.debug(
+                    f"Fetched {len(org_timeseries)} timeseries from org {org_id}"
+                )
+
+            self.logger.info(f"Total timeseries fetched: {len(all_timeseries)}")
+            return all_timeseries
+
+        except Exception as e:
+            self.logger.error(f"Failed to fetch timeseries: {e}")
+            return []
+
     def validate_metadata(self, metadata: Dict[str, Any]) -> bool:
         """
         Validate that required time series references are present.
