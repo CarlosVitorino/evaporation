@@ -290,3 +290,81 @@ class TestShuttleworthCalculator:
         # Verify sum
         assert abs(components.evaporation_total -
                    (components.aerodynamic_component + components.radiation_component)) < 0.01
+
+    def test_excel_validation_exact(self):
+        """
+        Precise validation test against ShuttleworthLakeEvaporation.xlsm reference file.
+
+        This test verifies that our implementation produces EXACTLY the same results
+        as the Excel reference file for a specific test scenario.
+
+        Test scenario from Excel file (docs/ShuttleworthLakeEvaporation.xlsm):
+
+        Input parameters:
+            Tmax = 33°C
+            Tmin = 17°C
+            RHmax = 60%
+            RHmin = 25%
+            Avg windspeed 10m (u10) = 25 km/h
+            Actual hours of sunshine (n) = 16 hours
+            Avg Air pressure at station height = 99.9 kPa
+            Latitude = 51°
+            Altitude = 23 m
+            Day number = 170
+            Albedo = 0.23
+
+        Expected output from Excel:
+            EVlake = 9.88 mm/day (Total lake evaporation)
+            Ea ≈ 4.48 mm/day (Aerodynamic component)
+            Er ≈ 5.40 mm/day (Radiation component)
+
+        Tolerance: ±0.01 mm/day (1% of expected value)
+
+        This test ensures that any changes to the calculation logic are verified
+        against the reference implementation.
+        """
+        components = ShuttleworthCalculator.calculate_with_components(
+            t_max=33.0,
+            t_min=17.0,
+            rh_max=60.0,
+            rh_min=25.0,
+            u10=25.0,
+            sunshine_hours=16.0,
+            pressure=99.9,
+            latitude=51.0,
+            altitude=23.0,
+            day_number=170,
+            albedo=0.23
+        )
+
+        # Expected values from Excel reference file
+        expected_evlake = 9.88  # mm/day
+        expected_ea = 4.48      # mm/day (aerodynamic component)
+        expected_er = 5.40      # mm/day (radiation component)
+
+        # Tolerance: ±0.01 mm/day
+        tolerance = 0.01
+
+        # Test total evaporation - MUST match Excel exactly
+        assert abs(components.evaporation_total - expected_evlake) <= tolerance, \
+            f"EVlake mismatch! Expected {expected_evlake:.2f} mm/day, " \
+            f"got {components.evaporation_total:.2f} mm/day. " \
+            f"Difference: {abs(components.evaporation_total - expected_evlake):.4f} mm/day"
+
+        # Test aerodynamic component
+        assert abs(components.aerodynamic_component - expected_ea) <= tolerance, \
+            f"Ea (aerodynamic) mismatch! Expected {expected_ea:.2f} mm/day, " \
+            f"got {components.aerodynamic_component:.2f} mm/day. " \
+            f"Difference: {abs(components.aerodynamic_component - expected_ea):.4f} mm/day"
+
+        # Test radiation component
+        assert abs(components.radiation_component - expected_er) <= tolerance, \
+            f"Er (radiation) mismatch! Expected {expected_er:.2f} mm/day, " \
+            f"got {components.radiation_component:.2f} mm/day. " \
+            f"Difference: {abs(components.radiation_component - expected_er):.4f} mm/day"
+
+        # Verify sum (components should add up to total)
+        calculated_sum = components.aerodynamic_component + components.radiation_component
+        assert abs(components.evaporation_total - calculated_sum) < 0.0001, \
+            f"Component sum mismatch! Ea + Er = {calculated_sum:.4f}, " \
+            f"but EVlake = {components.evaporation_total:.4f}"
