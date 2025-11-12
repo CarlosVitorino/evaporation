@@ -30,6 +30,43 @@ class DataFetcher:
         self.api_client = api_client
         self.logger = logger or logging.getLogger(__name__)
 
+        # Lookup maps for timeseries references
+        self._path_to_id_map: Dict[str, str] = {}
+        self._exchange_id_to_id_map: Dict[str, str] = {}
+
+    def set_timeseries_list(self, timeseries_list: List[Dict[str, Any]]) -> None:
+        """
+        Set the timeseries list and build lookup maps.
+
+        This allows the data fetcher to resolve tsPath and exchangeId references
+        to their corresponding tsId values.
+
+        Args:
+            timeseries_list: List of timeseries objects from the API
+        """
+        self._path_to_id_map.clear()
+        self._exchange_id_to_id_map.clear()
+
+        for ts in timeseries_list:
+            ts_id = ts.get("id")
+            if not ts_id:
+                continue
+
+            # Map path to ID
+            ts_path = ts.get("path")
+            if ts_path:
+                self._path_to_id_map[ts_path] = ts_id
+
+            # Map exchangeId to ID
+            exchange_id = ts.get("exchangeId")
+            if exchange_id:
+                self._exchange_id_to_id_map[exchange_id] = ts_id
+
+        self.logger.info(
+            f"Built lookup maps: {len(self._path_to_id_map)} paths, "
+            f"{len(self._exchange_id_to_id_map)} exchange IDs"
+        )
+
     def fetch_time_series_data(
         self,
         time_series_ref: str,
@@ -89,26 +126,64 @@ class DataFetcher:
         Parse time series reference to extract ID.
 
         Supports formats:
-        - tsId(123)
-        - tsPath(/path/to/series)
-        - exchangeId(abc123)
-        - Direct ID: 123
+        - tsId(123) - Returns the ID directly
+        - tsPath(/path/to/series) - Looks up the ID from path
+        - exchangeId(abc123) - Looks up the ID from exchange ID
+        - Direct ID: 123 - Returns as-is
 
         Args:
             reference: Time series reference string
 
         Returns:
             Extracted time series ID
+
+        Raises:
+            ValueError: If reference is empty, invalid, or not found in lookup maps
         """
         if not reference:
             raise ValueError("Empty time series reference")
 
         # Check for function-style references
         if "(" in reference and ")" in reference:
-            # Extract content between parentheses
+            # Extract the type and value
+            ref_type = reference[:reference.index("(")].strip()
             start = reference.index("(") + 1
             end = reference.index(")")
-            return reference[start:end]
+            ref_value = reference[start:end]
+
+            # Handle different reference types
+            if ref_type == "tsId":
+                # Direct ID - return as is
+                return ref_value
+
+            elif ref_type == "tsPath":
+                # Look up ID by path
+                if ref_value in self._path_to_id_map:
+                    ts_id = self._path_to_id_map[ref_value]
+                    self.logger.debug(f"Resolved tsPath({ref_value}) to tsId {ts_id}")
+                    return ts_id
+                else:
+                    raise ValueError(
+                        f"tsPath '{ref_value}' not found in timeseries list. "
+                        f"Make sure to call set_timeseries_list() before fetching data."
+                    )
+
+            elif ref_type == "exchangeId":
+                # Look up ID by exchange ID
+                if ref_value in self._exchange_id_to_id_map:
+                    ts_id = self._exchange_id_to_id_map[ref_value]
+                    self.logger.debug(f"Resolved exchangeId({ref_value}) to tsId {ts_id}")
+                    return ts_id
+                else:
+                    raise ValueError(
+                        f"exchangeId '{ref_value}' not found in timeseries list. "
+                        f"Make sure to call set_timeseries_list() before fetching data."
+                    )
+
+            else:
+                # Unknown reference type - return the value
+                self.logger.warning(f"Unknown reference type '{ref_type}', using value as-is")
+                return ref_value
 
         # Assume it's a direct ID
         return reference
