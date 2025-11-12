@@ -5,7 +5,10 @@ Handles retrieval of organization locations.
 """
 
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .client import APIClient
 
 
 class LocationsAPI:
@@ -14,7 +17,7 @@ class LocationsAPI:
     # Type hints for attributes provided by APIClient base class
     logger: logging.Logger
 
-    def get(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Any:
+    def get(self, endpoint: str, params: Any = None) -> Any:
         """Method provided by APIClient base class."""
         ...
 
@@ -41,7 +44,7 @@ class LocationsAPI:
         tags: Optional[str] = None,
         include_geometry: bool = False,
         include_geometry_ids: bool = False,
-        **kwargs
+        **kwargs: Any
     ) -> List[Dict[str, Any]]:
         """
         Get organization locations list.
@@ -60,7 +63,7 @@ class LocationsAPI:
         self.logger.info(f"Fetching locations for org {organization_id}")
         endpoint = f"/organizations/{organization_id}/locations"
 
-        params = {}
+        params: Dict[str, Any] = {}
         if name:
             params["name"] = name
         if tags:
@@ -73,7 +76,7 @@ class LocationsAPI:
         # Add any additional query parameters
         params.update(kwargs)
 
-        result = self.get(endpoint, params=params if params else None)
+        result = self.get(endpoint, params=params if params else None) 
 
         # API returns a list or dict with locations
         if isinstance(result, list):

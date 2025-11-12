@@ -110,16 +110,13 @@ class LakeEvaporationApp:
             # Initialize components
             self.initialize_components()
             
-            # Ensure components are initialized
-            if not all([
-                self.discovery,
-                self.data_fetcher,
-                self.processor,
-                self.evaporation_calc,
-                self.sunshine_calc,
-                self.writer
-            ]):
-                raise RuntimeError("Components not properly initialized")
+            # Type narrowing: assert components are initialized
+            assert self.discovery is not None, "Discovery service not initialized"
+            assert self.data_fetcher is not None, "Data fetcher not initialized"
+            assert self.processor is not None, "Processor not initialized"
+            assert self.evaporation_calc is not None, "Evaporation calculator not initialized"
+            assert self.sunshine_calc is not None, "Sunshine calculator not initialized"
+            assert self.writer is not None, "Writer not initialized"
 
             # Determine target date (previous day if not specified)
             if target_date is None:
@@ -189,16 +186,13 @@ class LakeEvaporationApp:
         Returns:
             Result dictionary or None if processing failed
         """
-        # Ensure components are initialized
-        if not all([
-            self.discovery,
-            self.data_fetcher,
-            self.processor,
-            self.evaporation_calc,
-            self.sunshine_calc,
-            self.writer
-        ]):
-            raise RuntimeError("Components not properly initialized")
+        # Type narrowing: assert components are initialized
+        assert self.discovery is not None, "Discovery service not initialized"
+        assert self.data_fetcher is not None, "Data fetcher not initialized"
+        assert self.processor is not None, "Processor not initialized"
+        assert self.evaporation_calc is not None, "Evaporation calculator not initialized"
+        assert self.sunshine_calc is not None, "Sunshine calculator not initialized"
+        assert self.writer is not None, "Writer not initialized"
 
         location_name = location.get("name", "Unknown")
         self.logger.info(f"Processing location: {location_name}")
