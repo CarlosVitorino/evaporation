@@ -110,7 +110,6 @@ class LakeEvaporationApp:
             # Initialize components
             self.initialize_components()
             
-            # Ensure components are initialized
             assert self.discovery is not None
             assert self.data_fetcher is not None
             assert self.processor is not None
@@ -125,7 +124,7 @@ class LakeEvaporationApp:
             target_date = target_date.replace(hour=0, minute=0, second=0, microsecond=0)
             self.logger.info(f"Calculating evaporation for: {target_date.date()}")
 
-            # Discover all lake evaporation time series across all organizations
+            # Discover all lake evaporation time series across all organizations and cache all timeseries
             with LoggerContext(self.logger, "time series discovery"):
                 time_series_list = self.discovery.get_all_evaporation_timeseries()
 
@@ -136,13 +135,6 @@ class LakeEvaporationApp:
             self.logger.info(f"Processing {len(time_series_list)} time series")
 
             # Get cached timeseries for lookup (to resolve tsPath and exchangeId)
-            # These were already fetched during location discovery
-            with LoggerContext(self.logger, "timeseries lookup initialization"):
-                cached_timeseries = self.discovery.get_cached_timeseries()
-                self.data_fetcher.set_timeseries_list(cached_timeseries)
-
-            # Get cached timeseries for lookup (to resolve tsPath and exchangeId)
-            # These were already fetched during location discovery
             with LoggerContext(self.logger, "timeseries lookup initialization"):
                 cached_timeseries = self.discovery.get_cached_timeseries()
                 self.data_fetcher.set_timeseries_list(cached_timeseries)
