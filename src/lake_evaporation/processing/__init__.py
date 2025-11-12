@@ -49,19 +49,21 @@ class DataProcessor:
     def convert_units(
         self,
         aggregates: Dict[str, float],
-        source_units: Dict[str, str]
+        source_units: Dict[str, str],
+        actual_units: Optional[Dict[str, str]] = None
     ) -> Dict[str, float]:
         """
         Convert aggregated values to required units.
 
         Args:
             aggregates: Dictionary with aggregated values
-            source_units: Dictionary mapping field names to their source units
+            source_units: Dictionary mapping field names to their source units (fallback)
+            actual_units: Dictionary with actual units from timeseries (takes precedence)
 
         Returns:
             Dictionary with converted values
         """
-        return self.converter.convert_units(aggregates, source_units)
+        return self.converter.convert_units(aggregates, source_units, actual_units)
 
     def validate_aggregates(self, aggregates: Dict[str, float]) -> Tuple[bool, List[str]]:
         """
