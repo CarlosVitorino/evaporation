@@ -12,10 +12,11 @@ from .client import APIClient
 from .auth import AuthAPI
 from .locations import LocationsAPI
 from .timeseries import TimeSeriesAPI
+from .raster import RasterAPI
 from . import helpers
 
 
-class KistersAPI(AuthAPI, LocationsAPI, TimeSeriesAPI):
+class KistersAPI(AuthAPI, LocationsAPI, TimeSeriesAPI, RasterAPI):
     """
     Unified API client for KISTERS Web Portal.
 
@@ -60,6 +61,7 @@ __all__ = [
     "AuthAPI",
     "LocationsAPI",
     "TimeSeriesAPI",
+    "RasterAPI",
     "KistersAPI",
     "helpers",
 ]

@@ -48,5 +48,26 @@
       "sunshine_hours",
       "global_radiation"
     ]
+  },
+  "raster": {
+    "datasource_id": 1,
+    "enabled": true,
+    "use_as_fallback": true,
+    "models": {
+      "europe": "icon_eu",
+      "global": "gfs"
+    },
+    "parameters": {
+      "temperature": "TMP_2M",
+      "pressure": "PRMSL",
+      "humidity": "RH_2M",
+      "wind_speed": "FF_10M",
+      "cloud": "TCDC"
+    },
+    "_comments": {
+      "datasource_id": "Raster datasource ID for fetching weather data",
+      "use_as_fallback": "Use raster data when timeseries metadata is missing or invalid",
+      "models": "Model selection based on location: icon_eu for Europe, gfs for global (also fallback for Europe)"
+    }
   }
 }

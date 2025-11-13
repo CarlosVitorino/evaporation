@@ -8,6 +8,8 @@ import logging
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timedelta
 from .api import KistersAPI
+from .raster_fetcher import RasterDataFetcher
+from .core.config import Config
 
 
 class DataFetcher:
@@ -16,6 +18,7 @@ class DataFetcher:
     def __init__(
         self,
         api_client: KistersAPI,
+        config: Optional[Config] = None,
         logger: Optional[logging.Logger] = None
     ):
         """
@@ -23,14 +26,21 @@ class DataFetcher:
 
         Args:
             api_client: API client instance
+            config: Configuration object (for raster fallback)
             logger: Logger instance
         """
         self.api_client = api_client
+        self.config = config
         self.logger = logger or logging.getLogger(__name__)
 
         # Lookup maps for timeseries references
         self._path_to_id_map: Dict[str, str] = {}
         self._exchange_id_to_id_map: Dict[str, str] = {}
+
+        # Raster data fetcher (for fallback)
+        self.raster_fetcher: Optional[RasterDataFetcher] = None
+        if config and config.raster_enabled:
+            self.raster_fetcher = RasterDataFetcher(api_client, config, logger)
 
     def set_timeseries_list(self, timeseries_list: List[Dict[str, Any]]) -> None:
         """
@@ -261,6 +271,63 @@ class DataFetcher:
                 end_date,
                 organization_id
             )
+
+        # Check if we should use raster fallback
+        should_use_fallback = (
+            self.raster_fetcher is not None and
+            self.config is not None and
+            self.config.raster_use_as_fallback
+        )
+
+        if should_use_fallback:
+            # Determine which required parameters are missing
+            required_params = ["temperature", "humidity", "wind_speed", "air_pressure"]
+            missing_params = [
+                param for param in required_params
+                if param not in data or not data.get(param)
+            ]
+
+            # Check if any required parameters are missing or have no data
+            if missing_params:
+                self.logger.info(
+                    f"Missing required parameters: {', '.join(missing_params)}. "
+                    f"Attempting raster fallback..."
+                )
+
+                # Try to fetch from raster
+                location = location_metadata.get("location", {})
+                latitude = location.get("latitude")
+                longitude = location.get("longitude")
+
+                if latitude is not None and longitude is not None:
+                    try:
+                        raster_data = self.raster_fetcher.fetch_raster_data_for_location(
+                            latitude=latitude,
+                            longitude=longitude,
+                            start_date=start_date,
+                            end_date=end_date,
+                            organization_id=organization_id
+                        )
+
+                        # Fill in missing data with raster data
+                        for param in missing_params:
+                            if raster_data.get(param):
+                                data[param] = raster_data[param]
+                                self.logger.info(
+                                    f"  {param}: {len(raster_data[param])} data points "
+                                    f"(from raster fallback)"
+                                )
+                            else:
+                                self.logger.warning(
+                                    f"  {param}: No data available even from raster fallback"
+                                )
+
+                    except Exception as e:
+                        self.logger.error(f"Failed to fetch raster fallback data: {e}")
+                else:
+                    self.logger.warning(
+                        "Cannot use raster fallback: location coordinates not available"
+                    )
 
         # Log data availability
         for sensor_type, sensor_data in data.items():
