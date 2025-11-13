@@ -83,6 +83,15 @@ class UnitConverter:
                 converted["air_pressure_avg"], unit, "kPa"
             )
 
+        # Sunshine hours conversions
+        if "sunshine_hours" in converted:
+            # Use actual sunshine unit from timeseries, or fall back to config
+            unit = actual_units.get("sunshine_hours") or source_units.get("sunshine", "hours")
+            self.logger.debug(f"Converting sunshine_hours from {unit} to hours")
+            converted["sunshine_hours"] = self.convert_sunshine(
+                converted["sunshine_hours"], unit, "hours"
+            )
+
         return converted
 
     def convert_temperature(self, value: float, from_unit: str, to_unit: str) -> float:
@@ -197,3 +206,29 @@ class UnitConverter:
             return kpa / 0.133322
         else:
             return kpa
+
+    def convert_sunshine(self, value: float, from_unit: str, to_unit: str) -> float:
+        """
+        Convert sunshine duration between units.
+
+        Args:
+            value: Sunshine duration value
+            from_unit: Source unit (hours, minutes, seconds)
+            to_unit: Target unit
+
+        Returns:
+            Converted sunshine duration value
+        """
+        if from_unit == to_unit:
+            return value
+
+        # Convert to hours first
+        from_unit_lower = from_unit.lower()
+        if from_unit_lower in ["minutes", "min", "m"]:
+            hours = value / 60
+        elif from_unit_lower in ["seconds", "sec", "s"]:
+            hours = value / 3600
+        else:
+            hours = value  # Assume hours
+
+        return hours

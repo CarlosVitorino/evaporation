@@ -1,36 +1,70 @@
 """
-Sunshine hours calculation using Ångström-Prescott method.
+Sunshine hours calculation module.
 
-Estimates actual sunshine hours from global radiation measurements.
+Provides methods to calculate sunshine hours using different methods.
 """
 
 import logging
 import math
-import statistics
-from typing import Dict, Any, List, Optional
+from typing import List, Tuple, Optional, Any
 from datetime import datetime
 
 
 class SunshineCalculator:
-    """Calculate sunshine hours from global radiation."""
 
     def __init__(
         self,
         a: float = 0.25,
-        b: float = 0.5,
-        logger: Optional[logging.Logger] = None
+        b: float = 0.50,
+        logger=None
     ):
         """
-        Initialize sunshine calculator.
+        Initialize calculator.
 
         Args:
             a: Ångström-Prescott coefficient a (default 0.25)
-            b: Ångström-Prescott coefficient b (default 0.5)
+            b: Ångström-Prescott coefficient b (default 0.50)
             logger: Logger instance
         """
         self.a = a
         self.b = b
         self.logger = logger or logging.getLogger(__name__)
+
+    def calculate_from_data_points(
+        self,
+        radiation_data: List[List[Any]],
+        latitude: float,
+        day_number: int
+    ) -> float:
+        """
+        Calculate sunshine hours from global radiation measurements.
+
+        Uses the Ångström-Prescott equation inverted:
+        Rs/Ra = a + b*(n/N)
+        Therefore: n = N * (Rs/Ra - a) / b
+
+        Args:
+            radiation_data: List of (timestamp, radiation) tuples in W/m²
+            latitude: Latitude in decimal degrees
+            day_number: Day of year (1-365)
+
+        Returns:
+            Sunshine hours for the day
+        """
+        if not radiation_data:
+            return 0.0
+
+        # Calculate daily mean solar radiation (W/m² to MJ/m²/day)
+        total_radiation_wm2 = sum(value for _, value in radiation_data)
+        mean_radiation_wm2 = total_radiation_wm2 / len(radiation_data)
+        # Convert W/m² to MJ/m²/day (1 W/m² over 24h = 0.0864 MJ/m²/day)
+        rs = mean_radiation_wm2 * 0.0864
+
+        return self.calculate_sunshine_hours(
+            global_radiation=rs,
+            latitude=latitude,
+            day_number=day_number
+        )
 
     def calculate_sunshine_hours(
         self,
@@ -84,41 +118,119 @@ class SunshineCalculator:
 
         self.logger.debug(f"Calculated sunshine hours: {n:.2f} hours")
         return n
-
-    def calculate_from_data_points(
+    
+    def calculate_from_cloud_cover_layers(
         self,
-        radiation_data: List[List[Any]],
         latitude: float,
-        day_number: int
+        day_number: int,
+        low_cloud_octas: float,
+        medium_cloud_octas: float,
+        high_cloud_octas: float
     ) -> float:
         """
-        Calculate sunshine hours from global radiation data points.
-
+        Calculate sunshine hours from layered cloud cover data (NWP/observation method).
+        
+        Formula from meteorological practice:
+            nel = nl + 0.875 * ((8 - nl) / 8) * nm
+            Ne = nel + 0.25 * ((8 - nel) / 8) * nh
+        
+        Then converts effective cloud cover to sunshine hours using empirical relationship.
+        
         Args:
-            radiation_data: List of [timestamp, radiation_value] pairs in W/m²
             latitude: Latitude in decimal degrees
             day_number: Day of year (1-365)
+            low_cloud_octas: Low cloud cover (0-8 octas, below 2km altitude)
+            medium_cloud_octas: Medium cloud cover (0-8 octas, 2-6km altitude)
+            high_cloud_octas: High cloud cover (0-8 octas, above 6km altitude)
+        
+        Returns:
+            Sunshine hours for the day
+            
+    
+        """
+        # Step 1: Calculate maximum possible sunshine hours
+        max_daylight_hours = self._calculate_daylight_hours(latitude, day_number)
+        
+        # Step 2: Ensure cloud values are within valid range [0, 8]
+        nl = max(0.0, min(8.0, low_cloud_octas))
+        nm = max(0.0, min(8.0, medium_cloud_octas))
+        nh = max(0.0, min(8.0, high_cloud_octas))
+        
+        # Step 3: Calculate effective low+medium cloud cover
+        effective_low_medium = nl + 0.875 * ((8 - nl) / 8) * nm
+        
+        # Step 4: Calculate total effective cloud cover (Ne)
+        effective_total_cloud = effective_low_medium + 0.25 * ((8 - effective_low_medium) / 8) * nh
+        
+        # Step 5: Convert effective cloud cover to sunshine fraction
+        cloud_fraction = effective_total_cloud / 8.0
+        sunshine_fraction = 1.0 - 0.75 * cloud_fraction
+        sunshine_fraction = max(0.0, min(1.0, sunshine_fraction))
+        
+        # Step 6: Calculate actual sunshine hours
+        actual_sunshine_hours = max_daylight_hours * sunshine_fraction
+        
+        if self.logger:
+            self.logger.debug(
+                f"Layered cloud sunshine calculation: "
+                f"Low={nl:.1f}, Medium={nm:.1f}, High={nh:.1f} octas, "
+                f"Effective cloud (Ne)={effective_total_cloud:.2f} octas, "
+                f"Max daylight={max_daylight_hours:.2f}h, "
+                f"Sunshine fraction={sunshine_fraction:.1%}, "
+                f"Estimated sunshine={actual_sunshine_hours:.2f}h"
+            )
+        
+        return actual_sunshine_hours
+ 
+    def calculate_from_temperature_range(
+        self,
+        latitude: float,
+        day_number: int,
+        t_min: float,
+        t_max: float,
+        coastal: bool = False
+    ) -> float:
+        """
+        Calculate sunshine hours from temperature range (Hargreaves method).
+
+        Uses empirical relationship: n/N ≈ kRs * sqrt(Tmax - Tmin)
+        where kRs depends on location (interior vs coastal)
+        
+        Formula: actual_sunshine_hours / max_possible_hours ≈ k_hargreaves * √(T_max - T_min)
+
+        Args:
+            latitude: Latitude in decimal degrees
+            day_number: Day of year (1-365)
+            t_min: Minimum temperature (°C)
+            t_max: Maximum temperature (°C)
+            coastal: True if location is coastal (within ~50km of coast)
 
         Returns:
-            Estimated sunshine hours
+            Sunshine hours for the day
         """
-        if not radiation_data:
-            return 0.0
+        # Calculate maximum daylight hours
+        n_max = self._calculate_daylight_hours(latitude, day_number)
 
-        # Extract radiation values (second element of each [timestamp, value] pair)
-        radiation_values = [point[1] for point in radiation_data if len(point) > 1 and point[1] is not None]
-        
-        if not radiation_values:
-            return 0.0
+        # Temperature difference
+        temp_diff = max(0, t_max - t_min)
 
-        # Calculate mean radiation for the day
-        mean_radiation = statistics.mean(radiation_values)
+        # Hargreaves empirical coefficient
+        # Coastal locations have smaller temperature ranges for same radiation
+        kRs = 0.16 if coastal else 0.19
 
-        return self.calculate_sunshine_hours(
-            mean_radiation,
-            latitude=latitude,
-            day_number=day_number
-        )
+        # Estimate sunshine fraction
+        sunshine_fraction = kRs * math.sqrt(temp_diff)
+        sunshine_fraction = max(0.0, min(1.0, sunshine_fraction))
+
+        n = n_max * sunshine_fraction
+
+        if self.logger:
+            self.logger.debug(
+                f"Sunshine from temp range: N={n_max:.2f}h, "
+                f"ΔT={temp_diff:.1f}°C, n={n:.2f}h"
+            )
+
+        return n
 
     def _calculate_extraterrestrial_radiation(
         self,
@@ -126,115 +238,66 @@ class SunshineCalculator:
         day_number: int
     ) -> float:
         """
-        Calculate extraterrestrial radiation.
+        Calculate extraterrestrial radiation (Ra) in MJ/m²/day.
+        Based on FAO-56 equation 21.
 
         Args:
-            latitude: Latitude in degrees
-            day_number: Day of year
+            latitude: Latitude in decimal degrees
+            day_number: Day of year (1-365)
 
         Returns:
             Extraterrestrial radiation in MJ/m²/day
         """
         # Convert latitude to radians
-        lat_rad = latitude * math.pi / 180
+        lat_rad = math.radians(latitude)
+
+        # Solar constant
+        gsc = 0.0820  # MJ/m²/min
+
+        # Inverse relative distance Earth-Sun
+        dr = 1 + 0.033 * math.cos(2 * math.pi * day_number / 365)
 
         # Solar declination
-        delta = self._calculate_solar_declination(day_number)
-
-        # Relative distance Earth-Sun
-        dr = 1 + 0.033 * math.cos(2 * math.pi * day_number / 365)
+        delta = 0.409 * math.sin(2 * math.pi * day_number / 365 - 1.39)
 
         # Sunset hour angle
         ws = math.acos(-math.tan(lat_rad) * math.tan(delta))
 
-        # Solar constant
-        Gsc = 0.0820  # MJ/m²/min
-
         # Extraterrestrial radiation
-        Ra = (24 * 60 / math.pi) * Gsc * dr * (
+        ra = (24 * 60 / math.pi) * gsc * dr * (
             ws * math.sin(lat_rad) * math.sin(delta) +
             math.cos(lat_rad) * math.cos(delta) * math.sin(ws)
         )
 
-        return Ra
+        return ra
 
-    def _calculate_solar_declination(self, day_number: int) -> float:
+    def _calculate_daylight_hours(
+        self,
+        latitude: float,
+        day_number: int
+    ) -> float:
         """
-        Calculate solar declination.
+        Calculate maximum possible daylight hours (N).
+
+        Based on FAO-56 equation 34.
 
         Args:
-            day_number: Day of year (1-365/366)
-
-        Returns:
-            Solar declination in radians
-        """
-        return 0.409 * math.sin((2 * math.pi / 365) * day_number - 1.39)
-
-    def _calculate_daylight_hours(self, latitude: float, day_number: int) -> float:
-        """
-        Calculate maximum possible sunshine hours (day length).
-
-        Args:
-            latitude: Latitude in degrees
-            day_number: Day of year
+            latitude: Latitude in decimal degrees
+            day_number: Day of year (1-365)
 
         Returns:
             Maximum daylight hours
         """
         # Convert latitude to radians
-        lat_rad = latitude * math.pi / 180
+        lat_rad = math.radians(latitude)
 
         # Solar declination
-        delta = self._calculate_solar_declination(day_number)
+        delta = 0.409 * math.sin(2 * math.pi * day_number / 365 - 1.39)
 
         # Sunset hour angle
         ws = math.acos(-math.tan(lat_rad) * math.tan(delta))
 
-        # Day length in hours
-        N = (24 / math.pi) * ws
+        # Daylight hours
+        n = 24 * ws / math.pi
 
-        return N
-
-    def estimate_from_cloud_cover(
-        self,
-        cloud_cover_low: float,
-        cloud_cover_medium: float,
-        cloud_cover_high: float,
-        latitude: float,
-        day_number: int
-    ) -> float:
-        """
-        Estimate sunshine hours from cloud cover data (NWP analysis).
-
-        This is an alternative method when global radiation is not available.
-
-        Args:
-            cloud_cover_low: Low cloud cover (%)
-            cloud_cover_medium: Medium cloud cover (%)
-            cloud_cover_high: High cloud cover (%)
-            latitude: Location latitude
-            day_number: Day of year
-
-        Returns:
-            Estimated sunshine hours
-        """
-        self.logger.debug("Estimating sunshine hours from cloud cover")
-
-        # Calculate maximum possible sunshine hours
-        N = self._calculate_daylight_hours(latitude, day_number)
-
-        # Weight cloud layers (low clouds have more impact)
-        total_cloud = (
-            cloud_cover_low * 1.0 +
-            cloud_cover_medium * 0.6 +
-            cloud_cover_high * 0.3
-        ) / 1.9
-
-        # Estimate clear sky fraction
-        clear_fraction = 1 - (total_cloud / 100)
-
-        # Estimated sunshine hours
-        n = N * clear_fraction
-
-        self.logger.debug(f"Estimated sunshine hours from cloud cover: {n:.2f} hours")
         return n
