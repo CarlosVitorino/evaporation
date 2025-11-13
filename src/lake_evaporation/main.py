@@ -74,6 +74,7 @@ class LakeEvaporationApp:
         # Data Fetcher
         self.data_fetcher = DataFetcher(
             api_client=self.api_client,
+            config=self.config,
             logger=self.logger
         )
 
