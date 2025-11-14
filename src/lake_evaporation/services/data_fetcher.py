@@ -47,6 +47,11 @@ class DataFetcher:
         if config and config.raster_enabled:
             self.raster_fetcher = RasterDataFetcher(api_client, config, logger)
 
+        # Raster data fetcher (for fallback)
+        self.raster_fetcher: Optional[RasterDataFetcher] = None
+        if config and config.raster_enabled:
+            self.raster_fetcher = RasterDataFetcher(api_client, config, logger)
+
     def set_timeseries_list(self, timeseries_list: List[Dict[str, Any]]) -> None:
         """
         Set the timeseries list and build lookup maps.
@@ -341,6 +346,63 @@ class DataFetcher:
             unit = self.get_timeseries_unit(ts_ref)
             if unit:
                 units["global_radiation"] = unit
+
+        # Check if we should use raster fallback
+        should_use_fallback = (
+            self.raster_fetcher is not None and
+            self.config is not None and
+            self.config.raster_use_as_fallback
+        )
+
+        if should_use_fallback:
+            # Determine which required parameters are missing
+            required_params = ["temperature", "humidity", "wind_speed", "air_pressure"]
+            missing_params = [
+                param for param in required_params
+                if param not in data or not data.get(param)
+            ]
+
+            # Check if any required parameters are missing or have no data
+            if missing_params:
+                self.logger.info(
+                    f"Missing required parameters: {', '.join(missing_params)}. "
+                    f"Attempting raster fallback..."
+                )
+
+                # Try to fetch from raster
+                location = location_metadata.get("location", {})
+                latitude = location.get("latitude")
+                longitude = location.get("longitude")
+
+                if latitude is not None and longitude is not None:
+                    try:
+                        raster_data = self.raster_fetcher.fetch_raster_data_for_location(
+                            latitude=latitude,
+                            longitude=longitude,
+                            start_date=start_date,
+                            end_date=end_date,
+                            organization_id=organization_id
+                        )
+
+                        # Fill in missing data with raster data
+                        for param in missing_params:
+                            if raster_data.get(param):
+                                data[param] = raster_data[param]
+                                self.logger.info(
+                                    f"  {param}: {len(raster_data[param])} data points "
+                                    f"(from raster fallback)"
+                                )
+                            else:
+                                self.logger.warning(
+                                    f"  {param}: No data available even from raster fallback"
+                                )
+
+                    except Exception as e:
+                        self.logger.error(f"Failed to fetch raster fallback data: {e}")
+                else:
+                    self.logger.warning(
+                        "Cannot use raster fallback: location coordinates not available"
+                    )
 
         # Check if we should use raster fallback
         should_use_fallback = (

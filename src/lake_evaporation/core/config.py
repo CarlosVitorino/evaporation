@@ -223,6 +223,42 @@ class Config:
             "cloud": "TCDC"
         })
 
+    @property
+    def raster_datasource_id(self) -> int:
+        """Get raster datasource ID."""
+        return self.get("raster.datasource_id", 1)
+
+    @property
+    def raster_enabled(self) -> bool:
+        """Check if raster data fetching is enabled."""
+        return self.get("raster.enabled", True)
+
+    @property
+    def raster_use_as_fallback(self) -> bool:
+        """Check if raster should be used as fallback."""
+        return self.get("raster.use_as_fallback", True)
+
+    @property
+    def raster_europe_model(self) -> str:
+        """Get raster model for Europe."""
+        return self.get("raster.models.europe", "icon_eu")
+
+    @property
+    def raster_global_model(self) -> str:
+        """Get raster model for global/non-Europe."""
+        return self.get("raster.models.global", "gfs")
+
+    @property
+    def raster_parameters(self) -> Dict[str, str]:
+        """Get raster parameter mappings."""
+        return self.get("raster.parameters", {
+            "temperature": "TMP_2M",
+            "pressure": "PRMSL",
+            "humidity": "RH_2M",
+            "wind_speed": "FF_10M",
+            "cloud": "TCDC"
+        })
+
     def __repr__(self) -> str:
         """String representation of config."""
         return f"Config(file={self.config_file}, env={self.get('environment')})"
