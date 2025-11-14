@@ -10,8 +10,8 @@ from unittest.mock import Mock, MagicMock, patch
 from datetime import datetime
 
 from lake_evaporation.core.config import Config
-from lake_evaporation.raster_fetcher import RasterDataFetcher
-from lake_evaporation.data_fetcher import DataFetcher
+from lake_evaporation.services.raster_fetcher import RasterDataFetcher
+from lake_evaporation.services.data_fetcher import DataFetcher
 
 
 class TestRasterFallback(unittest.TestCase):

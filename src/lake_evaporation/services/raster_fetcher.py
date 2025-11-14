@@ -5,10 +5,12 @@ Provides fallback data fetching from raster sources when timeseries are unavaila
 """
 
 import logging
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional, Tuple, TYPE_CHECKING
 from datetime import datetime, timedelta
 
-from .core.config import Config
+if TYPE_CHECKING:
+    from ..api import KistersAPI
+    from ..core.config import Config
 
 
 class RasterDataFetcher:
@@ -16,8 +18,7 @@ class RasterDataFetcher:
     Fetches weather data from raster sources.
 
     This class provides fallback data fetching when timeseries metadata
-    is missing or invalid. It uses raster data sources like GFS and DWD-ICON-EU
-    to extract weather parameters at specific geographic points.
+    is missing or invalid.
     """
 
     # Europe bounding box (approximate)
@@ -28,7 +29,12 @@ class RasterDataFetcher:
         "max_lon": 45.0
     }
 
-    def __init__(self, api_client, config: Config, logger: Optional[logging.Logger] = None):
+    def __init__(
+        self,
+        api_client: "KistersAPI",
+        config: "Config",
+        logger: Optional[logging.Logger] = None
+    ):
         """
         Initialize raster data fetcher.
 
@@ -75,7 +81,7 @@ class RasterDataFetcher:
             return (self.config.raster_europe_model, self.config.raster_global_model)
         else:
             # Rest of world: use GFS
-            return (self.config.raster_global_model, None)
+            return (self.config.raster_global_model, self.config.raster_global_model)
 
     def _get_raster_timeseries_list(
         self,
@@ -139,7 +145,7 @@ class RasterDataFetcher:
             # Check if this parameter is in our list
             if parameter_name in parameter_names:
                 # Check if the model matches (path should contain model identifier)
-                if f"/{model}/" in path.lower():
+                if path and f"/{model}/" in path.lower():
                     filtered[parameter_name] = ts
                     self.logger.debug(
                         f"Found {parameter_name} for model {model}: {ts.get('timeseriesId')}"
@@ -256,7 +262,7 @@ class RasterDataFetcher:
         start_date: datetime,
         end_date: datetime,
         organization_id: Optional[str] = None
-    ) -> Dict[str, List[Dict[str, Any]]]:
+    ) -> Dict[str, List[List[Any]]]:
         """
         Fetch raster weather data for a specific location and date range.
 
@@ -285,13 +291,25 @@ class RasterDataFetcher:
         # Prepare point for extraction
         points = [{"lat": latitude, "lon": longitude}]
 
-        # Convert dates to ISO format
+        # Convert dates to ISO format with timezone
+        # If datetime is naive (no timezone), assume UTC
+        if start_date.tzinfo is None:
+            from datetime import timezone
+            start_date = start_date.replace(tzinfo=timezone.utc)
+        if end_date.tzinfo is None:
+            from datetime import timezone
+            end_date = end_date.replace(tzinfo=timezone.utc)
+        
         start_iso = start_date.isoformat()
         end_iso = end_date.isoformat()
 
         # Fetch data for each parameter
         result = {}
         datasource_id = self.config.raster_datasource_id
+
+        # Get models for potential fallback
+        primary_model, fallback_model = self.get_model_for_location(latitude, longitude)
+        needs_fallback = primary_model != fallback_model
 
         for param_type, timeseries in timeseries_map.items():
             if timeseries is None:
@@ -317,8 +335,29 @@ class RasterDataFetcher:
 
                 # Parse and format the data
                 parsed_data = self._parse_raster_response(raster_data, param_type)
+                
+                # If data is empty and we have a fallback model, try it
+                if not parsed_data and needs_fallback:
+                    self.logger.info(
+                        f"No data for {param_type} from primary model, trying fallback model {fallback_model}"
+                    )
+                    fallback_ts = self._get_fallback_timeseries(
+                        param_type, fallback_model, organization_id
+                    )
+                    
+                    if fallback_ts:
+                        fallback_id = fallback_ts.get("timeseriesId")
+                        if fallback_id:
+                            raster_data = self.api.get_raster_point_data(
+                                datasource_id=datasource_id,
+                                timeseries_id=fallback_id,
+                                points=points,
+                                start_date=start_iso,
+                                end_date=end_iso
+                            )
+                            parsed_data = self._parse_raster_response(raster_data, param_type)
+                
                 result[param_type] = parsed_data
-
                 self.logger.info(f"Fetched {len(parsed_data)} data points for {param_type}")
 
             except Exception as e:
@@ -327,55 +366,101 @@ class RasterDataFetcher:
 
         return result
 
+    def _get_fallback_timeseries(
+        self,
+        param_type: str,
+        fallback_model: str,
+        organization_id: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Get fallback timeseries for a parameter type.
+
+        Args:
+            param_type: Parameter type (e.g., "temperature")
+            fallback_model: Fallback model identifier
+            organization_id: Optional organization ID
+
+        Returns:
+            Fallback timeseries object or None
+        """
+        try:
+            timeseries_list = self._get_raster_timeseries_list(organization_id)
+            param_mappings = self.config.raster_parameters
+            
+            if param_type not in param_mappings:
+                return None
+            
+            raster_name = param_mappings[param_type]
+            filtered = self.filter_timeseries_by_model_and_parameter(
+                timeseries_list,
+                fallback_model,
+                [raster_name]
+            )
+            
+            return filtered.get(raster_name)
+        except Exception as e:
+            self.logger.error(f"Failed to get fallback timeseries for {param_type}: {e}")
+            return None
+
     def _parse_raster_response(
         self,
-        raster_response: Dict[str, Any],
+        raster_response: Any,
         parameter_type: str
     ) -> List[Dict[str, Any]]:
         """
         Parse raster API response into standardized format.
 
         Args:
-            raster_response: Raw response from raster API
+            raster_response: Raw response from raster API (list of timeseries objects)
             parameter_type: Type of parameter (for logging)
 
         Returns:
-            List of data points in format [{"timestamp": "...", "value": ...}, ...]
+           Map Object with a List of data points in format [{"time": "...", "data": ...}, ...]
+
+        
         """
-        # The exact structure depends on the API response format
-        # This is a placeholder that should be adjusted based on actual API response
-
-        # Expected response format might be:
-        # {
-        #     "data": [
-        #         {"timestamp": "2024-01-01T00:00:00Z", "values": [15.2]},
-        #         ...
-        #     ]
-        # }
-
         data_points = []
 
-        if not isinstance(raster_response, dict):
-            self.logger.warning(f"Unexpected raster response format for {parameter_type}")
+        # Response should be a list of timeseries objects
+        if not isinstance(raster_response, list):
+            self.logger.warning(
+                f"Unexpected raster response format for {parameter_type}: expected list, got {type(raster_response)}"
+            )
             return data_points
 
-        # Try to extract data from various possible response structures
-        raw_data = raster_response.get("data", [])
+        if not raster_response:
+            self.logger.warning(f"Empty raster response for {parameter_type}")
+            return data_points
 
+        # Take the first timeseries object (we only requested one point)
+        timeseries_obj = raster_response[0]
+
+        if not isinstance(timeseries_obj, dict):
+            self.logger.warning(f"Unexpected timeseries object format for {parameter_type}")
+            return data_points
+
+        # Extract the data array
+        raw_data = timeseries_obj.get("data", [])
+
+        if not raw_data:
+            self.logger.warning(f"No data in raster response for {parameter_type}")
+            return data_points
+
+        # Parse data array - each item is [timestamp, value]
         for item in raw_data:
-            if not isinstance(item, dict):
-                continue
 
-            timestamp = item.get("timestamp") or item.get("time")
-            values = item.get("values") or item.get("value")
+            timestamp = item.get("time")
+            value = item.get("data")
 
-            if timestamp and values is not None:
-                # If values is a list, take the first value (for single point extraction)
-                value = values[0] if isinstance(values, list) else values
-
+            if timestamp is not None and value is not None:
                 data_points.append({
                     "timestamp": timestamp,
                     "value": value
                 })
+
+        self.logger.debug(
+            f"Parsed {len(data_points)} data points for {parameter_type} "
+            f"(unit: {timeseries_obj.get('unitSymbol', 'unknown')})"
+        )
 
         return data_points

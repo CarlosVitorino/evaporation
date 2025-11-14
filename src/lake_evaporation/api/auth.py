@@ -15,6 +15,8 @@ from .client import APIClient
 
 class AuthAPI(APIClient):
     """API client with authentication capabilities."""
+   
+    logger: logging.Logger
 
     def __init__(
         self,
