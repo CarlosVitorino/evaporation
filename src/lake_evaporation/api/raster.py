@@ -133,9 +133,9 @@ class RasterAPI:
 
         # Build query parameters
         params_dict = {
-            "extractMode": extract_mode,
+            #"extractMode": extract_mode,
             "points": points_str,
-            "allModelMembers": str(all_model_members).lower(),
+            #"allModelMembers": str(all_model_members).lower(),
             "from": start_date,
             "until": end_date,
         }

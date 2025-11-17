@@ -409,7 +409,7 @@ class DataFetcher:
             # Type assertion: we know raster_fetcher is not None here
             assert self.raster_fetcher is not None
 
-            raster_data = self.raster_fetcher.fetch_raster_data_for_location(
+            raster_data, raster_units = self.raster_fetcher.fetch_raster_data_for_location(
                 latitude=latitude,
                 longitude=longitude,
                 start_date=start_date,
@@ -419,11 +419,14 @@ class DataFetcher:
 
             # Fill in missing data
             for param in missing_params:
-                if raster_data.get(param):
+                if param in raster_data and raster_data[param]:
                     data[param] = raster_data[param]
+                    if param in raster_units:
+                        units[param] = raster_units[param]
+                    unit_info = f" (unit: {raster_units.get(param, 'unknown')})"
                     self.logger.info(
                         f"  {param}: {len(raster_data[param])} data points "
-                        f"(from raster fallback)"
+                        f"(from raster fallback{unit_info})"
                     )
                 else:
                     self.logger.warning(
