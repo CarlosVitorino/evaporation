@@ -9,6 +9,8 @@ from typing import Dict, Any, List, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..api import KistersAPI
+    from ..core.config import Config
+
 
 
 class TimeSeriesDiscovery:
@@ -17,6 +19,7 @@ class TimeSeriesDiscovery:
     def __init__(
         self,
         api_client: "KistersAPI",
+        config: Optional["Config"] = None,
         logger: Optional[logging.Logger] = None
     ):
         """
@@ -24,9 +27,11 @@ class TimeSeriesDiscovery:
 
         Args:
             api_client: API client instance
+            config: Configuration object (for raster fallback capability check)
             logger: Logger instance
         """
         self.api_client = api_client
+        self.config = config
         self.logger = logger or logging.getLogger(__name__)
 
         # Cache for all timeseries (populated during discovery)
@@ -209,7 +214,13 @@ class TimeSeriesDiscovery:
 
     def validate_metadata(self, metadata: Dict[str, Any]) -> bool:
         """
-        Validate that required time series references are present.
+        Validate that required data sources are available.
+
+        With raster fallback enabled, validation is more flexible:
+        - If timeseries references exist for required fields, they must be valid
+        - If timeseries are missing BUT raster fallback is enabled AND location has coordinates,
+          validation still passes (raster will provide the data)
+        - If neither timeseries nor raster fallback is available, validation fails
 
         Args:
             metadata: Metadata dictionary
@@ -224,15 +235,67 @@ class TimeSeriesDiscovery:
             "air_pressure_ts"
         ]
 
-        missing_fields = []
-        for field in required_fields:
-            if not metadata.get(field):
-                missing_fields.append(field)
+        # Check which required fields are missing
+        missing_fields = [field for field in required_fields if not metadata.get(field)]
 
-        if missing_fields:
+        if not missing_fields:
+            # All timeseries are present - validation passes
+            return True
+
+        # Some timeseries are missing - check if raster fallback can cover them
+        if self._can_use_raster_fallback(metadata):
+            self.logger.info(
+                f"Location {metadata.get('name')}: Missing timeseries {', '.join(missing_fields)}, "
+                f"but raster fallback is available"
+            )
+            return True
+
+        # No timeseries and no raster fallback - validation fails
+        self.logger.warning(
+            f"Missing required fields in metadata for {metadata.get('name')}: "
+            f"{', '.join(missing_fields)} (and raster fallback not available)"
+        )
+        return False
+
+    def _can_use_raster_fallback(self, metadata: Dict[str, Any]) -> bool:
+        """
+        Check if raster fallback can be used for this location.
+
+        Raster fallback requires:
+        1. Raster to be enabled in configuration
+        2. Raster to be configured for use as fallback
+        3. Location to have valid coordinates (latitude/longitude)
+
+        Args:
+            metadata: Location metadata
+
+        Returns:
+            True if raster fallback is available
+        """
+        # Check if raster is enabled and configured as fallback
+        if not self.config:
+            return False
+
+        if not self.config.raster_enabled or not self.config.raster_use_as_fallback:
+            return False
+
+        # Check if location has valid coordinates
+        location = metadata.get("location", {})
+        latitude = location.get("latitude")
+        longitude = location.get("longitude")
+
+        if latitude is None or longitude is None:
             self.logger.warning(
-                f"Missing required fields in metadata for {metadata.get('name')}: "
-                f"{', '.join(missing_fields)}"
+                f"Location {metadata.get('name')} has no coordinates, "
+                f"cannot use raster fallback"
+            )
+            return False
+
+        # Validate coordinate ranges
+        if not (-90 <= latitude <= 90) or not (-180 <= longitude <= 180):
+            self.logger.warning(
+                f"Location {metadata.get('name')} has invalid coordinates "
+                f"(lat={latitude}, lon={longitude}), cannot use raster fallback"
             )
             return False
 

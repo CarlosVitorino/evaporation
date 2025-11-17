@@ -17,22 +17,11 @@ class TimeSeriesAPI:
     # Type hints for attributes provided by APIClient base class
     logger: logging.Logger
 
-    def get(self, endpoint: str, params: Any = None) -> Any:
-        """Method provided by APIClient base class."""
-        ...
-
-    def put(self, endpoint: str, data: Any) -> Any:
-        """Method provided by APIClient base class."""
-        ...
-
-    # Type hints for attributes provided by APIClient base class
-    logger: logging.Logger
-
     def get(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Any:
         """Method provided by APIClient base class."""
         ...
 
-    def post(self, endpoint: str, data: Optional[Dict[str, Any]] = None) -> Any:
+    def put(self, endpoint: str, data: Optional[Dict[str, Any]] = None) -> Any:
         """Method provided by APIClient base class."""
         ...
 
@@ -162,10 +151,10 @@ class TimeSeriesAPI:
         self.logger.debug(f"Fetching data for time series {time_series_id}")  # type: ignore
         endpoint = f"/organizations/{organization_id}/timeSeries/{time_series_id}/data"
         params = {
-            "from": start_date, 
+            "from": start_date,
             "to": end_date
         }
-        return self.get(endpoint, params=params)
+        return self.get(endpoint, params=params)  # type: ignore
 
     def write_time_series_value(
         self,
@@ -196,4 +185,4 @@ class TimeSeriesAPI:
             "data": [[timestamp, value]]
         }
 
-        return self.put(endpoint, data)  # type: ignore
+        return self.put(endpoint, data=data)  # type: ignore

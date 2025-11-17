@@ -11,7 +11,7 @@ from typing import Optional
 
 from .core import Config, setup_logger, LoggerContext, constants
 from .api import KistersAPI
-from .services import TimeSeriesDiscovery, DataFetcher, DataWriter
+from .services import TimeSeriesDiscovery, DataFetcher, DataWriter, SunshineService
 from .processing import DataProcessor
 from .algorithms import EvaporationCalculator, SunshineCalculator
 
@@ -43,6 +43,7 @@ class LakeEvaporationApp:
         self.processor: Optional[DataProcessor] = None
         self.evaporation_calc: Optional[EvaporationCalculator] = None
         self.sunshine_calc: Optional[SunshineCalculator] = None
+        self.sunshine_service: Optional[SunshineService] = None
         self.writer: Optional[DataWriter] = None
 
     def initialize_components(self) -> None:
@@ -68,12 +69,14 @@ class LakeEvaporationApp:
         # Discovery (works across all organizations)
         self.discovery = TimeSeriesDiscovery(
             api_client=self.api_client,
+            config=self.config,
             logger=self.logger
         )
 
         # Data Fetcher
         self.data_fetcher = DataFetcher(
             api_client=self.api_client,
+            config=self.config,
             logger=self.logger
         )
 
@@ -88,6 +91,12 @@ class LakeEvaporationApp:
         self.sunshine_calc = SunshineCalculator(
             a=angstrom.get("a", constants.DEFAULT_ANGSTROM_A),
             b=angstrom.get("b", constants.DEFAULT_ANGSTROM_B),
+            logger=self.logger
+        )
+
+        # Sunshine Service
+        self.sunshine_service = SunshineService(
+            sunshine_calc=self.sunshine_calc,
             logger=self.logger
         )
 
@@ -116,6 +125,7 @@ class LakeEvaporationApp:
             assert self.processor is not None, "Processor not initialized"
             assert self.evaporation_calc is not None, "Evaporation calculator not initialized"
             assert self.sunshine_calc is not None, "Sunshine calculator not initialized"
+            assert self.sunshine_service is not None, "Sunshine service not initialized"
             assert self.writer is not None, "Writer not initialized"
 
             # Determine target date (previous day if not specified)
@@ -192,6 +202,7 @@ class LakeEvaporationApp:
         assert self.processor is not None, "Processor not initialized"
         assert self.evaporation_calc is not None, "Evaporation calculator not initialized"
         assert self.sunshine_calc is not None, "Sunshine calculator not initialized"
+        assert self.sunshine_service is not None, "Sunshine service not initialized"
         assert self.writer is not None, "Writer not initialized"
 
         location_name = location.get("name", "Unknown")
@@ -225,23 +236,19 @@ class LakeEvaporationApp:
             self.logger.error(f"Invalid aggregates for {location_name}: {errors}")
             return None
 
-        # Calculate sunshine hours if not directly measured
-        if "sunshine_hours" not in aggregates:
-            if "global_radiation" in data and data["global_radiation"]:
-                self.logger.info("Calculating sunshine hours from global radiation")
-                location_info = location.get("location", {})
-                latitude = location_info.get("latitude", 0)
-                day_number = target_date.timetuple().tm_yday
-
-                sunshine = self.sunshine_calc.calculate_from_data_points(
-                    radiation_data=data["global_radiation"],
-                    latitude=latitude,
-                    day_number=day_number
-                )
-                aggregates["sunshine_hours"] = sunshine
-            else:
-                self.logger.warning("No sunshine hours or global radiation data available")
-                aggregates["sunshine_hours"] = 0
+        # Calculate sunshine hours using best available method
+        location_info = location.get("location", {})
+        day_number = target_date.timetuple().tm_yday
+        
+        with LoggerContext(self.logger, f"sunshine calculation for {location_name}"):
+            sunshine_hours = self.sunshine_service.calculate_sunshine_hours(
+                data=data,
+                aggregates=aggregates,
+                latitude=location_info.get("latitude", 0),
+                day_number=day_number,
+                location_info=location_info
+            )
+            aggregates["sunshine_hours"] = sunshine_hours
 
         # Calculate evaporation
         with LoggerContext(self.logger, f"evaporation calculation for {location_name}"):

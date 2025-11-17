@@ -187,6 +187,48 @@ class Config:
         """Get albedo constant."""
         return self.get("constants.albedo", constants.DEFAULT_ALBEDO)
 
+    @property
+    def raster_datasource_id(self) -> int:
+        """Get raster datasource ID."""
+        datasource_id = self.get("raster.datasource_id")
+        if datasource_id is None:
+            raise ValueError("Missing required configuration: raster.datasource_id")
+        return datasource_id
+
+    @property
+    def raster_enabled(self) -> bool:
+        """Check if raster data fetching is enabled."""
+        return self.get("raster.enabled", False)
+
+    @property
+    def raster_use_as_fallback(self) -> bool:
+        """Check if raster should be used as fallback."""
+        return self.get("raster.use_as_fallback", False)
+
+    @property
+    def raster_europe_model(self) -> str:
+        """Get raster model for Europe."""
+        model = self.get("raster.models.europe")
+        if model is None:
+            raise ValueError("Missing required configuration: raster.models.europe")
+        return model
+
+    @property
+    def raster_global_model(self) -> str:
+        """Get raster model for global/non-Europe."""
+        model = self.get("raster.models.global")
+        if model is None:
+            raise ValueError("Missing required configuration: raster.models.global")
+        return model
+
+    @property
+    def raster_parameters(self) -> Dict[str, str]:
+        """Get raster parameter mappings."""
+        params = self.get("raster.parameters")
+        if params is None:
+            raise ValueError("Missing required configuration: raster.parameters")
+        return params
+
     def __repr__(self) -> str:
         """String representation of config."""
         return f"Config(file={self.config_file}, env={self.get('environment')})"

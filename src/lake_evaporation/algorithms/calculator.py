@@ -126,6 +126,23 @@ class EvaporationCalculator:
 
         # Extract required aggregates with defaults
         sunshine_hours = aggregates.get("sunshine_hours", 0)
+       
+        # Log all parameters that will be used for calculation
+        self.logger.info(
+            f"Evaporation calculation parameters - "
+            f"Date: {date.strftime('%Y-%m-%d')}, "
+            f"T_min: {aggregates['t_min']:.2f}°C, "
+            f"T_max: {aggregates['t_max']:.2f}°C, "
+            f"RH_min: {aggregates['rh_min']:.1f}%, "
+            f"RH_max: {aggregates['rh_max']:.1f}%, "
+            f"Wind: {aggregates['wind_speed_avg']:.2f} km/h, "
+            f"Pressure: {aggregates['air_pressure_avg']:.2f} kPa, "
+            f"Sunshine: {sunshine_hours:.2f}h, "
+            f"Lat: {latitude:.4f}°, "
+            f"Alt: {altitude:.1f}m, "
+            f"Day: {day_number}, "
+            f"Albedo: {albedo:.2f}"
+        )
 
         return self.calculate(
             t_min=aggregates["t_min"],

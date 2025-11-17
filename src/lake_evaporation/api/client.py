@@ -134,13 +134,14 @@ class APIClient:
         response = self._make_request("GET", endpoint, params=params)
         return response.json()
 
-    def post(self, endpoint: str, data: Dict[str, Any], skip_auth_check: bool = False) -> Dict[str, Any]:
+    def post(self, endpoint: str, data: Optional[Dict[str, Any]] = None, skip_auth_check: bool = False) -> Dict[str, Any]:
         """
         Make POST request.
 
         Args:
             endpoint: API endpoint
             data: Request body data
+            skip_auth_check: Skip authentication check
 
         Returns:
             JSON response as dictionary
@@ -148,7 +149,7 @@ class APIClient:
         response = self._make_request("POST", endpoint, json=data, skip_auth_check=skip_auth_check)
         return response.json()
 
-    def put(self, endpoint: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    def put(self, endpoint: str, data: Dict[str, Any] | None = None) -> Dict[str, Any]:
         """
         Make PUT request.
 

@@ -13,8 +13,6 @@ if TYPE_CHECKING:
 
 class OrganizationsAPI:
     """Mixin for organization-related API operations."""
-
-    # Type hints for attributes provided by APIClient base class
     logger: logging.Logger
 
     def get(self, endpoint: str, params: Any = None) -> Any:
