@@ -20,43 +20,6 @@ from dataclasses import dataclass
 
 from ..core import constants
 
-
-# Physical Constants
-LATENT_HEAT_VAPORIZATION = 2.45  # MJ/kg
-SOLAR_CONSTANT = 0.0820  # MJ m⁻² min⁻¹
-STEFAN_BOLTZMANN = 4.903e-9  # MJ K⁻⁴ m⁻² day⁻¹
-
-# Vapor Pressure Constants (Tetens formula)
-TETENS_A = 0.6108  # kPa
-TETENS_B = 17.27
-TETENS_C = 237.3  # °C
-
-# Wind Adjustment
-WIND_HEIGHT_ADJUSTMENT = 0.748  # 10m to 2m height
-AERODYNAMIC_RESISTANCE_COEF = 6.43
-WIND_FACTOR = 0.536
-
-# Psychrometric Constant Coefficient
-PSYCHROMETRIC_COEF = 0.665e-3  # kPa/°C
-
-# Radiation Constants (Ångström-Prescott)
-ANGSTROM_A = 0.25
-ANGSTROM_B = 0.5
-CLEAR_SKY_COEF = 0.75
-ALTITUDE_FACTOR = 2e-5
-
-# Net Longwave Radiation Constants
-NLW_CONST_1 = 0.34
-NLW_CONST_2 = 0.14
-NLW_CONST_3 = 1.35
-NLW_CONST_4 = 0.35
-
-# Solar Geometry Constants
-EARTH_ORBIT_ECCENTRICITY = 0.033
-SOLAR_DECLINATION_AMPLITUDE = 0.409
-SOLAR_DECLINATION_PHASE = 1.39  # radians
-
-
 @dataclass
 class EvaporationComponents:
     """Container for evaporation calculation components and intermediate values."""
@@ -188,7 +151,7 @@ class ShuttleworthCalculator:
         tmean = (t_max + t_min) / 2
         delta = ShuttleworthCalculator._calculate_slope_vapor_pressure_curve(tmean)
         gamma = ShuttleworthCalculator._calculate_psychrometric_constant(pressure)
-        lambda_v_mg = LATENT_HEAT_VAPORIZATION * (delta + gamma)
+        lambda_v_mg = constants.LATENT_HEAT_VAPORIZATION * (delta + gamma)
 
         # SECTION 4: Solar Radiation Calculations
         ra, n, sunshine_ratio, rs, rso = ShuttleworthCalculator._calculate_solar_radiation(
@@ -255,7 +218,7 @@ class ShuttleworthCalculator:
                 - u2: Wind speed at 2m height (m/s)
         """
         u10_ms = u10_kmh / 3.6  # Convert km/h to m/s
-        u2 = WIND_HEIGHT_ADJUSTMENT * u10_ms  # Adjust from 10m to 2m height
+        u2 = constants.WIND_HEIGHT_ADJUSTMENT * u10_ms  # Adjust from 10m to 2m height
         return u10_ms, u2
 
     # =========================================================================
@@ -273,8 +236,8 @@ class ShuttleworthCalculator:
         Returns:
             Saturation vapor pressure (kPa)
         """
-        return TETENS_A * math.exp(
-            (TETENS_B * temperature) / (temperature + TETENS_C)
+        return constants.TETENS_A * math.exp(
+            (constants.TETENS_B * temperature) / (temperature + constants.TETENS_C)
         )
 
     @staticmethod
@@ -335,7 +298,7 @@ class ShuttleworthCalculator:
         es_tmean = ShuttleworthCalculator._calculate_saturation_vapor_pressure(t_mean)
 
         # Slope calculation: delta = 4096 * [0.6108 * exp(...)] / (Tmean + 237.3)²
-        delta = (4096 * es_tmean) / ((t_mean + TETENS_C) ** 2)
+        delta = (4096 * es_tmean) / ((t_mean + constants.TETENS_C) ** 2)
 
         return delta
 
@@ -350,7 +313,7 @@ class ShuttleworthCalculator:
         Returns:
             Psychrometric constant (kPa/°C)
         """
-        return PSYCHROMETRIC_COEF * pressure
+        return constants.PSYCHROMETRIC_COEF * pressure
 
     # =========================================================================
     # SECTION 4: Solar Radiation Calculations
@@ -367,8 +330,8 @@ class ShuttleworthCalculator:
         Returns:
             Solar declination (radians)
         """
-        return SOLAR_DECLINATION_AMPLITUDE * math.sin(
-            (2 * math.pi / 365) * day_number - SOLAR_DECLINATION_PHASE
+        return constants.SOLAR_DECLINATION_AMPLITUDE * math.sin(
+            (2 * math.pi / 365) * day_number - constants.SOLAR_DECLINATION_PHASE
         )
 
     @staticmethod
@@ -396,13 +359,13 @@ class ShuttleworthCalculator:
         solar_decl = ShuttleworthCalculator._calculate_solar_declination(day_number)
 
         # Inverse relative distance Earth-Sun
-        dr = 1 + EARTH_ORBIT_ECCENTRICITY * math.cos(2 * math.pi * day_number / 365)
+        dr = 1 + constants.EARTH_ORBIT_ECCENTRICITY * math.cos(2 * math.pi * day_number / 365)
 
         # Sunset hour angle
         omega_s = math.acos(-math.tan(phi) * math.tan(solar_decl))
 
         # Extraterrestrial radiation
-        ra = (24 * 60 / math.pi) * SOLAR_CONSTANT * dr * (
+        ra = (24 * 60 / math.pi) * constants.SOLAR_CONSTANT * dr * (
             omega_s * math.sin(phi) * math.sin(solar_decl) +
             math.cos(phi) * math.cos(solar_decl) * math.sin(omega_s)
         )
@@ -445,10 +408,10 @@ class ShuttleworthCalculator:
         n_n = sunshine_hours / n_max if n_max > 0 else 0
 
         # Solar radiation (Ångström-Prescott equation)
-        rs = (ANGSTROM_A + ANGSTROM_B * n_n) * ra
+        rs = (constants.ANGSTROM_A + constants.ANGSTROM_B * n_n) * ra
 
         # Clear sky solar radiation
-        rso = (CLEAR_SKY_COEF + ALTITUDE_FACTOR * altitude) * ra
+        rso = (constants.CLEAR_SKY_COEF + constants.ALTITUDE_FACTOR * altitude) * ra
 
         return ra, n_max, n_n, rs, rso
 
@@ -493,9 +456,9 @@ class ShuttleworthCalculator:
         tmin_k4 = (t_min + 273.16) ** 4
 
         rnl = (
-            STEFAN_BOLTZMANN * (tmax_k4 + tmin_k4) / 2 *
-            (NLW_CONST_1 - NLW_CONST_2 * math.sqrt(ea)) *
-            (NLW_CONST_3 * rs_rso - NLW_CONST_4)
+            constants.STEFAN_BOLTZMANN * (tmax_k4 + tmin_k4) / 2 *
+            (constants.NLW_CONST_1 - constants.NLW_CONST_2 * math.sqrt(ea)) *
+            (constants.NLW_CONST_3 * rs_rso - constants.NLW_CONST_4)
         )
 
         # Net radiation
@@ -526,8 +489,8 @@ class ShuttleworthCalculator:
         Returns:
             Aerodynamic component (mm/day)
         """
-        ea = (gamma * AERODYNAMIC_RESISTANCE_COEF *
-              (1 + WIND_FACTOR * u2) * vpd) / lambda_v_mg
+        ea = (gamma * constants.AERODYNAMIC_RESISTANCE_COEF *
+              (1 + constants.WIND_FACTOR * u2) * vpd) / lambda_v_mg
 
         return ea
 
@@ -551,53 +514,3 @@ class ShuttleworthCalculator:
         er = (delta * rn) / lambda_v_mg
 
         return er
-
-
-# Convenience functions for direct use
-def calculate_lake_evaporation(
-    t_max: float,
-    t_min: float,
-    rh_max: float,
-    rh_min: float,
-    u10: float,
-    sunshine_hours: float,
-    pressure: float,
-    latitude: float,
-    altitude: float,
-    day_number: int,
-    albedo: float = constants.DEFAULT_ALBEDO
-) -> float:
-    """
-    Calculate daily lake evaporation using the Shuttleworth algorithm.
-
-    This is a convenience function that wraps the ShuttleworthCalculator class.
-
-    Args:
-        t_max: Daily maximum temperature (°C)
-        t_min: Daily minimum temperature (°C)
-        rh_max: Daily maximum relative humidity (%)
-        rh_min: Daily minimum relative humidity (%)
-        u10: Average wind speed at 10m height (km/h)
-        sunshine_hours: Actual hours of sunshine (hours)
-        pressure: Atmospheric pressure at station height (kPa)
-        latitude: Site latitude (degrees, -90 to 90)
-        altitude: Site elevation above sea level (meters)
-        day_number: Julian day of the year (1-365/366)
-        albedo: Surface albedo/reflectance (dimensionless, typically 0.23 for water)
-
-    Returns:
-        Daily lake evaporation (mm/day)
-    """
-    return ShuttleworthCalculator.calculate_lake_evaporation(
-        t_max=t_max,
-        t_min=t_min,
-        rh_max=rh_max,
-        rh_min=rh_min,
-        u10=u10,
-        sunshine_hours=sunshine_hours,
-        pressure=pressure,
-        latitude=latitude,
-        altitude=altitude,
-        day_number=day_number,
-        albedo=albedo
-    )

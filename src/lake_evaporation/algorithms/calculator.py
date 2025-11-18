@@ -22,12 +22,6 @@ class EvaporationCalculator:
     """
 
     def __init__(self, logger: Optional[logging.Logger] = None):
-        """
-        Initialize evaporation calculator.
-
-        Args:
-            logger: Logger instance
-        """
         self.logger = logger or logging.getLogger(__name__)
 
     def calculate(
@@ -63,8 +57,6 @@ class EvaporationCalculator:
         Returns:
             Lake evaporation in mm/day
         """
-        self.logger.debug("Calculating lake evaporation using Shuttleworth algorithm")
-
         try:
             evaporation = ShuttleworthCalculator.calculate_lake_evaporation(
                 t_max=t_max,
@@ -116,32 +108,31 @@ class EvaporationCalculator:
         Returns:
             Lake evaporation in mm/day
         """
-        # Extract location parameters
+
         location = location_metadata.get("location", {})
         latitude = location.get("latitude", 0)
         altitude = location.get("elevation", 0)
+        sunshine_hours = aggregates.get("sunshine_hours", 0)
 
         # Get day of year
         day_number = date.timetuple().tm_yday
 
-        # Extract required aggregates with defaults
-        sunshine_hours = aggregates.get("sunshine_hours", 0)
        
         # Log all parameters that will be used for calculation
-        self.logger.info(
+        self.logger.debug(
             f"Evaporation calculation parameters - "
             f"Date: {date.strftime('%Y-%m-%d')}, "
-            f"T_min: {aggregates['t_min']:.2f}°C, "
-            f"T_max: {aggregates['t_max']:.2f}°C, "
-            f"RH_min: {aggregates['rh_min']:.1f}%, "
-            f"RH_max: {aggregates['rh_max']:.1f}%, "
-            f"Wind: {aggregates['wind_speed_avg']:.2f} km/h, "
-            f"Pressure: {aggregates['air_pressure_avg']:.2f} kPa, "
-            f"Sunshine: {sunshine_hours:.2f}h, "
-            f"Lat: {latitude:.4f}°, "
-            f"Alt: {altitude:.1f}m, "
+            f"T_min: {aggregates['t_min']:.4f}°C, "
+            f"T_max: {aggregates['t_max']:.4f}°C, "
+            f"RH_min: {aggregates['rh_min']:.4f}%, "
+            f"RH_max: {aggregates['rh_max']:.4f}%, "
+            f"Wind: {aggregates['wind_speed_avg']:.4f} km/h, "
+            f"Pressure: {aggregates['air_pressure_avg']:.4f} kPa, "
+            f"Sunshine: {sunshine_hours:.8f}h, "
+            f"Lat: {latitude:.8f}°, "
+            f"Alt: {altitude:.8f}m, "
             f"Day: {day_number}, "
-            f"Albedo: {albedo:.2f}"
+            f"Albedo: {albedo:.4f}"
         )
 
         return self.calculate(

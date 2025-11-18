@@ -53,7 +53,6 @@ class LakeEvaporationApp:
         """Initialize all application components."""
         self.logger.info("Initializing components...")
 
-        # API Client with new authentication
         self.api_client = KistersAPI(
             base_url=self.config.api_base_url,
             username=self.config.auth_username,
@@ -65,11 +64,9 @@ class LakeEvaporationApp:
             logger=self.logger
         )
 
-        # Login to the portal
-        self.logger.info("Logging in to KISTERS Web Portal...")
         self.api_client.login()
 
-        # Discovery (works across all organizations)
+        # Discovery
         self.discovery = TimeSeriesDiscovery(
             api_client=self.api_client,
             config=self.config,
@@ -92,8 +89,8 @@ class LakeEvaporationApp:
         # Sunshine Calculator
         angstrom = self.config.get("constants.angstrom_prescott", {})
         self.sunshine_calc = SunshineCalculator(
-            a=angstrom.get("a", constants.DEFAULT_ANGSTROM_A),
-            b=angstrom.get("b", constants.DEFAULT_ANGSTROM_B),
+            a=angstrom.get("a", constants.ANGSTROM_A),
+            b=angstrom.get("b", constants.ANGSTROM_B),
             logger=self.logger
         )
 
@@ -123,16 +120,14 @@ class LakeEvaporationApp:
             # Initialize components
             self.initialize_components()
             
-            # Type narrowing: assert components are initialized
-            assert self.discovery is not None, "Discovery service not initialized"
-            assert self.data_fetcher is not None, "Data fetcher not initialized"
-            assert self.processor is not None, "Processor not initialized"
-            assert self.evaporation_calc is not None, "Evaporation calculator not initialized"
-            assert self.sunshine_calc is not None, "Sunshine calculator not initialized"
-            assert self.sunshine_service is not None, "Sunshine service not initialized"
-            assert self.writer is not None, "Writer not initialized"
+            assert self.discovery is not None
+            assert self.data_fetcher is not None
+            assert self.processor is not None
+            assert self.evaporation_calc is not None
+            assert self.sunshine_calc is not None
+            assert self.sunshine_service is not None
+            assert self.writer is not None
 
-            self.logger.info("Starting evaporation calculation run")
 
             # Discover all lake evaporation time series across all organizations
             with LoggerContext(self.logger, "time series discovery"):
@@ -149,7 +144,7 @@ class LakeEvaporationApp:
                 cached_timeseries = self.discovery.get_cached_timeseries()
                 self.data_fetcher.set_timeseries_list(cached_timeseries)
 
-            # Process each location (each may have different timezone)
+            # Process each location
             results = {}
             for time_series in time_series_list:
                 try:
@@ -159,8 +154,7 @@ class LakeEvaporationApp:
                     if target_date is None:
                         # Get previous day in organization's timezone
                         org_target_date, _ = self.date_utils.get_previous_day_range(org_timezone)
-                    else:
-                        # Use provided date but ensure it's in the right timezone
+                    else:  # This option will be used only for recovering past dates or testing. 
                         if target_date.tzinfo is None:
                             # Naive datetime - localize to organization timezone
                             org_target_date = self.date_utils.localize_to_timezone(
@@ -215,13 +209,13 @@ class LakeEvaporationApp:
             Result dictionary or None if processing failed
         """
         # Type narrowing: assert components are initialized
-        assert self.discovery is not None, "Discovery service not initialized"
-        assert self.data_fetcher is not None, "Data fetcher not initialized"
-        assert self.processor is not None, "Processor not initialized"
-        assert self.evaporation_calc is not None, "Evaporation calculator not initialized"
-        assert self.sunshine_calc is not None, "Sunshine calculator not initialized"
-        assert self.sunshine_service is not None, "Sunshine service not initialized"
-        assert self.writer is not None, "Writer not initialized"
+        assert self.discovery is not None
+        assert self.data_fetcher is not None
+        assert self.processor is not None
+        assert self.evaporation_calc is not None
+        assert self.sunshine_calc is not None
+        assert self.sunshine_service is not None
+        assert self.writer is not None
 
         location_name = location.get("name", "Unknown")
         self.logger.info(f"Processing location: {location_name}")
