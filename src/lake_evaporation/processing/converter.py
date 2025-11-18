@@ -83,6 +83,15 @@ class UnitConverter:
                 converted["air_pressure_avg"], unit, "kPa"
             )
 
+        # Sunshine hours conversions (convert to hours)
+        if "sunshine_hours" in converted and converted["sunshine_hours"] is not None:
+            # Get the actual unit from sunshine_hours data or global_radiation fallback
+            unit = actual_units.get("sunshine_hours") or actual_units.get("global_radiation") or source_units.get("sunshine", "hours")
+            self.logger.debug(f"Converting sunshine_hours from {unit} to hours")
+            converted["sunshine_hours"] = self.convert_to_hours(
+                converted["sunshine_hours"], unit
+            )
+
         return converted
 
     def convert_temperature(self, value: float, from_unit: str, to_unit: str) -> float:
@@ -197,3 +206,32 @@ class UnitConverter:
             return kpa / 0.133322
         else:
             return kpa
+
+    def convert_to_hours(self, value: float, from_unit: str) -> float:
+        """
+        Convert time duration to hours (for sunshine hours).
+
+        Args:
+            value: Time duration value
+            from_unit: Source unit (hours, minutes, seconds, h, min, sec, s)
+
+        Returns:
+            Value converted to hours
+        """
+        from_unit_lower = from_unit.lower().strip()
+        
+        # Already in hours
+        if from_unit_lower in ["hour", "hours", "h", "hr", "hrs"]:
+            return value
+        
+        # Convert from minutes to hours
+        if from_unit_lower in ["min", "mins", "minute", "minutes", "m"]:
+            return value / 60.0
+        
+        # Convert from seconds to hours
+        if from_unit_lower in ["sec", "secs", "second", "seconds", "s"]:
+            return value / 3600.0
+        
+        # If unknown unit, log warning and assume hours
+        self.logger.warning(f"Unknown time unit '{from_unit}', assuming hours")
+        return value

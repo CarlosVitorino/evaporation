@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
-from .core import Config, setup_logger, LoggerContext, constants
+from .core import Config, setup_logger, LoggerContext, constants, DateUtils
 from .api import KistersAPI
 from .services import TimeSeriesDiscovery, DataFetcher, DataWriter, SunshineService
 from .processing import DataProcessor
@@ -35,6 +35,9 @@ class LakeEvaporationApp:
         self.logger.info("Lake Evaporation Estimation System")
         self.logger.info("=" * 60)
         self.logger.info(f"Configuration: {self.config}")
+
+        # Initialize date utilities
+        self.date_utils = DateUtils(self.logger)
 
         # Initialize components (will be set in initialize_components)
         self.api_client: Optional[KistersAPI] = None
@@ -113,7 +116,8 @@ class LakeEvaporationApp:
         Run the evaporation calculation for a specific date.
 
         Args:
-            target_date: Date to calculate evaporation for. If None, uses previous day.
+            target_date: Date to calculate evaporation for. If None, uses previous day
+                        based on each organization's timezone.
         """
         try:
             # Initialize components
@@ -128,14 +132,9 @@ class LakeEvaporationApp:
             assert self.sunshine_service is not None, "Sunshine service not initialized"
             assert self.writer is not None, "Writer not initialized"
 
-            # Determine target date (previous day if not specified)
-            if target_date is None:
-                target_date = datetime.now() - timedelta(days=1)
+            self.logger.info("Starting evaporation calculation run")
 
-            target_date = target_date.replace(hour=0, minute=0, second=0, microsecond=0)
-            self.logger.info(f"Calculating evaporation for: {target_date.date()}")
-
-            # Discover all lake evaporation time series across all organizations and cache all timeseries
+            # Discover all lake evaporation time series across all organizations
             with LoggerContext(self.logger, "time series discovery"):
                 time_series_list = self.discovery.get_all_evaporation_timeseries()
 
@@ -145,16 +144,35 @@ class LakeEvaporationApp:
 
             self.logger.info(f"Processing {len(time_series_list)} time series")
 
-            # Get cached timeseries for lookup (to resolve tsPath and exchangeId)
+            # Get cached timeseries for lookup
             with LoggerContext(self.logger, "timeseries lookup initialization"):
                 cached_timeseries = self.discovery.get_cached_timeseries()
                 self.data_fetcher.set_timeseries_list(cached_timeseries)
 
-            # Process each location
+            # Process each location (each may have different timezone)
             results = {}
             for time_series in time_series_list:
                 try:
-                    result = self.process_location(time_series, target_date)
+                    # Determine target date for this organization's timezone
+                    org_timezone = time_series.get("organization_timezone", "UTC")
+                    
+                    if target_date is None:
+                        # Get previous day in organization's timezone
+                        org_target_date, _ = self.date_utils.get_previous_day_range(org_timezone)
+                    else:
+                        # Use provided date but ensure it's in the right timezone
+                        if target_date.tzinfo is None:
+                            # Naive datetime - localize to organization timezone
+                            org_target_date = self.date_utils.localize_to_timezone(
+                                target_date, org_timezone
+                            )
+                        else:
+                            # Aware datetime - convert to organization timezone
+                            org_target_date = self.date_utils.convert_to_timezone(
+                                target_date, org_timezone
+                            )
+
+                    result = self.process_location(time_series, org_target_date)
                     if result:
                         results[time_series["time_series_id"]] = result
                 except Exception as e:

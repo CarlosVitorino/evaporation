@@ -160,7 +160,7 @@ class TimeSeriesDiscovery:
         Always fetches from all organizations that the user has access to.
 
         Returns:
-            List of time series with metadata
+            List of time series with metadata (including organization timezone)
         """
         lake_evap_series = []
 
@@ -174,12 +174,15 @@ class TimeSeriesDiscovery:
             for org in organizations:
                 org_id = org.get("id")
                 org_name = org.get("name", org_id)
+                org_timezone = org.get("timeZone", "UTC")  # Default to UTC if not specified
 
                 if not org_id:
                     self.logger.warning(f"Organization {org_name} has no ID, skipping")
                     continue
 
-                self.logger.info(f"Processing organization: {org_name} ({org_id})")
+                self.logger.info(
+                    f"Processing organization: {org_name} ({org_id}) - Timezone: {org_timezone}"
+                )
 
                 # Find lake evaporation time series in this organization
                 lake_evap_series_raw_list = self.discover_lake_evaporation_series(org_id)
@@ -189,6 +192,7 @@ class TimeSeriesDiscovery:
                     metadata = self.extract_metadata(ts)
                     metadata["organization_id"] = org_id
                     metadata["organization_name"] = org_name
+                    metadata["organization_timezone"] = org_timezone 
                     lake_evap_series.append(metadata)
 
             self.logger.info(f"Total time series discovered: {len(lake_evap_series)}")

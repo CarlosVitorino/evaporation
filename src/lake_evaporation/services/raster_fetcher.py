@@ -8,6 +8,8 @@ import logging
 from typing import List, Dict, Any, Optional, Tuple, TYPE_CHECKING
 from datetime import datetime, timedelta
 
+from ..core import DateUtils
+
 if TYPE_CHECKING:
     from ..api import KistersAPI
     from ..core.config import Config
@@ -46,6 +48,7 @@ class RasterDataFetcher:
         self.api = api_client
         self.config = config
         self.logger = logger or logging.getLogger(__name__)
+        self.date_utils = DateUtils(logger)
         self._cached_timeseries_list: Optional[List[Dict[str, Any]]] = None
 
     def is_location_in_europe(self, latitude: float, longitude: float) -> bool:
@@ -177,9 +180,6 @@ class RasterDataFetcher:
                 "cloud": {...}
             }
         """
-        # Get parameter name mappings from config
-        param_mappings = self.config.raster_parameters
-
         # Determine model based on location
         primary_model, fallback_model = self.get_model_for_location(latitude, longitude)
 
@@ -193,26 +193,30 @@ class RasterDataFetcher:
 
         if not timeseries_list:
             self.logger.warning("No raster timeseries available")
-            return {key: None for key in param_mappings.keys()}
+            # Get parameter mappings for the primary model to return correct keys
+            try:
+                param_mappings = self.config.get_raster_parameters_for_model(primary_model)
+                return {key: None for key in param_mappings.keys()}
+            except Exception:
+                return {}
 
-        # Try primary model first
-        result = self._find_timeseries_for_model(
+        # Try primary model first with model-specific parameters
+        result = self._find_timeseries_for_model_with_params(
             timeseries_list,
-            primary_model,
-            param_mappings
+            primary_model
         )
 
         # If any parameters are missing and we have a fallback model, try it
-        if fallback_model:
+        if fallback_model and primary_model != fallback_model:
             missing_params = [k for k, v in result.items() if v is None]
             if missing_params:
                 self.logger.info(
                     f"Trying fallback model {fallback_model} for missing parameters: {missing_params}"
                 )
-                fallback_result = self._find_timeseries_for_model(
+                fallback_result = self._find_timeseries_for_model_with_params(
                     timeseries_list,
                     fallback_model,
-                    {k: v for k, v in param_mappings.items() if k in missing_params}
+                    only_params=missing_params
                 )
                 # Update result with fallback values
                 for k, v in fallback_result.items():
@@ -221,23 +225,37 @@ class RasterDataFetcher:
 
         return result
 
-    def _find_timeseries_for_model(
+    def _find_timeseries_for_model_with_params(
         self,
         timeseries_list: List[Dict[str, Any]],
         model: str,
-        param_mappings: Dict[str, str]
+        only_params: Optional[List[str]] = None
     ) -> Dict[str, Optional[Dict[str, Any]]]:
         """
-        Find timeseries for a specific model.
+        Find timeseries for a specific model using model-specific parameter mappings.
 
         Args:
             timeseries_list: List of all raster timeseries
             model: Model identifier
-            param_mappings: Parameter name mappings (e.g., {"temperature": "TMP_2M"})
+            only_params: If provided, only search for these parameter types
 
         Returns:
             Dictionary mapping parameter type to timeseries (or None if not found)
         """
+        # Get model-specific parameter mappings
+        try:
+            param_mappings = self.config.get_raster_parameters_for_model(model)
+        except ValueError as e:
+            self.logger.error(f"Failed to get parameters for model {model}: {e}")
+            return {}
+
+        # Filter to only requested parameters if specified
+        if only_params:
+            param_mappings = {
+                k: v for k, v in param_mappings.items() 
+                if k in only_params
+            }
+
         # Get list of raster parameter names we're looking for
         raster_param_names = list(param_mappings.values())
 
@@ -269,8 +287,8 @@ class RasterDataFetcher:
         Args:
             latitude: Location latitude
             longitude: Location longitude
-            start_date: Start date
-            end_date: End date
+            start_date: Start date (timezone-aware)
+            end_date: End date (timezone-aware)
             organization_id: Optional organization ID
 
         Returns:
@@ -296,17 +314,12 @@ class RasterDataFetcher:
         # Prepare point for extraction
         points = [{"lat": latitude, "lon": longitude}]
 
-        # Convert dates to ISO format with timezone
-        # If datetime is naive (no timezone), assume UTC
-        if start_date.tzinfo is None:
-            from datetime import timezone
-            start_date = start_date.replace(tzinfo=timezone.utc)
-        if end_date.tzinfo is None:
-            from datetime import timezone
-            end_date = end_date.replace(tzinfo=timezone.utc)
-        
-        start_iso = start_date.isoformat()
-        end_iso = end_date.isoformat()
+        # Ensure dates are timezone-aware and convert to ISO format
+        if start_date.tzinfo is None or end_date.tzinfo is None:
+            raise ValueError("start_date and end_date must be timezone-aware")
+
+        start_iso = self.date_utils.to_iso_with_timezone(start_date)
+        end_iso = self.date_utils.to_iso_with_timezone(end_date)
 
         # Fetch data for each parameter
         data: Dict[str, List[List[Any]]] = {}
@@ -323,6 +336,7 @@ class RasterDataFetcher:
                 data[param_type] = []
                 continue
 
+            product_name = timeseries.get("name")
             timeseries_id = timeseries.get("timeseriesId")
             if not timeseries_id:
                 self.logger.warning(f"Missing timeseriesId for {param_type}")
@@ -352,6 +366,7 @@ class RasterDataFetcher:
                     )
                     
                     if fallback_ts:
+                        product_name = fallback_ts.get("name")
                         fallback_id = fallback_ts.get("timeseriesId")
                         if fallback_id:
                             raster_data = self.api.get_raster_point_data(
@@ -369,8 +384,8 @@ class RasterDataFetcher:
                     units[param_type] = parsed_result["unit"]
                 
                 self.logger.info(
-                    f"Fetched {len(parsed_result['data'])} data points for {param_type} "
-                    f"(unit: {parsed_result['unit']})"
+                    f"Fetched {len(parsed_result['data'])} data points for {param_type}"
+                    f"(model: {product_name} unit: {parsed_result['unit']})"
                 )
 
             except Exception as e:
@@ -398,7 +413,9 @@ class RasterDataFetcher:
         """
         try:
             timeseries_list = self._get_raster_timeseries_list(organization_id)
-            param_mappings = self.config.raster_parameters
+            
+            # Get model-specific parameter mappings
+            param_mappings = self.config.get_raster_parameters_for_model(fallback_model)
             
             if param_type not in param_mappings:
                 return None
@@ -474,10 +491,5 @@ class RasterDataFetcher:
 
             if timestamp is not None and value is not None:
                 result["data"].append([timestamp, value])
-
-        self.logger.debug(
-            f"Parsed {len(result['data'])} data points for {parameter_type} "
-            f"(unit: {result['unit'] or 'unknown'})"
-        )
 
         return result

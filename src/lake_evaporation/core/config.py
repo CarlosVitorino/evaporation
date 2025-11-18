@@ -223,11 +223,64 @@ class Config:
 
     @property
     def raster_parameters(self) -> Dict[str, str]:
-        """Get raster parameter mappings."""
+        """
+        Get raster parameter mappings.
+        
+        Note: This returns a generic mapping. Use get_raster_parameters_for_model()
+        to get model-specific mappings.
+        """
         params = self.get("raster.parameters")
         if params is None:
             raise ValueError("Missing required configuration: raster.parameters")
+        
+        # For backward compatibility, if parameters is not model-specific,
+        # return it directly
+        if not isinstance(params, dict):
+            raise ValueError("raster.parameters must be a dictionary")
+        
+        # Check if it's model-specific (nested dict) or generic
+        first_value = next(iter(params.values()), None)
+        if isinstance(first_value, dict):
+            # Model-specific configuration - return the first model's params as default
+            # This is for backward compatibility only
+            return next(iter(params.values()))
+        
+        # Generic configuration
         return params
+    
+    def get_raster_parameters_for_model(self, model: str) -> Dict[str, str]:
+        """
+        Get raster parameter mappings for a specific model.
+        
+        Args:
+            model: Model identifier (e.g., "nwp_obslike/dwd/icon_eu")
+            
+        Returns:
+            Dictionary mapping parameter types to parameter names for this model
+            
+        Raises:
+            ValueError: If model parameters are not found
+        """
+        params = self.get("raster.parameters")
+        if params is None:
+            raise ValueError("Missing required configuration: raster.parameters")
+        
+        # Check if configuration is model-specific
+        if model in params:
+            model_params = params[model]
+            if not isinstance(model_params, dict):
+                raise ValueError(f"Invalid parameter configuration for model {model}")
+            return model_params
+        
+        # Fallback: check if it's a generic configuration (backward compatibility)
+        first_value = next(iter(params.values()), None)
+        if not isinstance(first_value, dict):
+            return params
+        
+        raise ValueError(
+            f"No raster parameters found for model '{model}'. "
+            f"Available models: {', '.join(params.keys())}"
+        )
 
     def __repr__(self) -> str:
         """String representation of config."""

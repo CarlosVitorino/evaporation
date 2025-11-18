@@ -6,9 +6,10 @@ Fetches time series data from the API for processing.
 
 import logging
 from typing import Dict, Any, Optional, List, Tuple, TYPE_CHECKING
-from datetime import datetime
+from datetime import datetime, timezone
 
 from .raster_fetcher import RasterDataFetcher
+from ..core import DateUtils
 
 if TYPE_CHECKING:
     from ..api import KistersAPI
@@ -35,6 +36,7 @@ class DataFetcher:
         self.api_client = api_client
         self.config = config
         self.logger = logger or logging.getLogger(__name__)
+        self.date_utils = DateUtils(logger)
 
         # Lookup maps for timeseries references
         self._path_to_id_map: Dict[str, str] = {}
@@ -98,8 +100,8 @@ class DataFetcher:
 
         Args:
             time_series_ref: Time series reference (tsId, tsPath, or exchangeId)
-            start_date: Start date for data fetch
-            end_date: End date for data fetch
+            start_date: Start date for data fetch (timezone-aware)
+            end_date: End date for data fetch (timezone-aware)
             organization_id: Organization ID
 
         Returns:
@@ -111,9 +113,9 @@ class DataFetcher:
             # Extract actual time series ID from reference
             ts_id = self._parse_time_series_reference(time_series_ref)
 
-            # Format dates as ISO strings (KISTERS expects this format)
-            start_iso = start_date.strftime("%Y-%m-%dT%H:%M:%S")
-            end_iso = end_date.strftime("%Y-%m-%dT%H:%M:%S")
+            # Convert to ISO format with timezone
+            start_iso = self.date_utils.to_iso_with_timezone(start_date)
+            end_iso = self.date_utils.to_iso_with_timezone(end_date)
 
             # Fetch data from API
             data = self.api_client.get_time_series_data(
@@ -236,21 +238,26 @@ class DataFetcher:
         Fetch all required sensor data for a specific day.
 
         Args:
-            location_metadata: Location metadata with time series references
-            target_date: Date to fetch data for
+            location_metadata: Location metadata with time series references and organization timezone
+            target_date: Date to fetch data for (can be naive or aware)
 
         Returns:
             Tuple of (data dictionary, units dictionary)
         """
-        self.logger.info(f"Fetching daily data for {target_date.date()}")
-
         organization_id = location_metadata.get("organization_id")
         if not organization_id:
             raise ValueError("Organization ID is required")
 
-        # Define date range (full day)
-        start_date = target_date.replace(hour=0, minute=0, second=0, microsecond=0)
-        end_date = start_date.replace(hour=23, minute=59, second=59)
+        # Get organization timezone
+        org_timezone = location_metadata.get("organization_timezone", "UTC")
+        self.logger.info(f"Fetching daily data for {target_date.date()} in timezone {org_timezone}")
+
+        # Get full day range in the organization's timezone
+        start_date, end_date = self.date_utils.get_day_range(target_date, org_timezone)
+
+        self.logger.info(
+            f"Date range: {start_date.isoformat()} to {end_date.isoformat()}"
+        )
 
         # Fetch all sensor data from timeseries
         data, units = self._fetch_all_sensors(
@@ -339,7 +346,7 @@ class DataFetcher:
             return data, units
 
         # Check for missing required parameters
-        required_params = ["temperature", "humidity", "wind_speed", "air_pressure"]
+        required_params = ["temperature", "humidity", "wind_speed", "air_pressure", "sunshine_hours", "global_radiation"]
         missing_params = [
             param for param in required_params
             if param not in data or not data.get(param)
@@ -423,11 +430,6 @@ class DataFetcher:
                     data[param] = raster_data[param]
                     if param in raster_units:
                         units[param] = raster_units[param]
-                    unit_info = f" (unit: {raster_units.get(param, 'unknown')})"
-                    self.logger.info(
-                        f"  {param}: {len(raster_data[param])} data points "
-                        f"(from raster fallback{unit_info})"
-                    )
                 else:
                     self.logger.warning(
                         f"  {param}: No data available even from raster fallback"
