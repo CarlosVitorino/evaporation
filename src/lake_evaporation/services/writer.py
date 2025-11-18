@@ -54,7 +54,6 @@ class DataWriter:
         Returns:
             True if successful, False otherwise
         """
-        # Set timestamp to midnight of the date
         timestamp = date.replace(hour=0, minute=0, second=0, microsecond=0)
 
         self.logger.info(
@@ -63,7 +62,6 @@ class DataWriter:
         )
 
         try:
-            # Prepare metadata
             write_metadata = metadata or {}
             write_metadata.update({
                 "calculation_date": datetime.now().isoformat(),
@@ -72,7 +70,6 @@ class DataWriter:
                 "algorithm": "Shuttleworth"
             })
 
-            # Write to API - timestamp in ISO format
             response = self.api_client.write_time_series_value(
                 time_series_id=time_series_id,
                 timestamp=timestamp.strftime("%Y-%m-%dT%H:%M:%S"),

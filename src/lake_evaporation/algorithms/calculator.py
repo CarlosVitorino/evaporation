@@ -116,18 +116,12 @@ class EvaporationCalculator:
         Returns:
             Lake evaporation in mm/day
         """
-        # Extract location parameters
         location = location_metadata.get("location", {})
         latitude = location.get("latitude", 0)
         altitude = location.get("elevation", 0)
-
-        # Get day of year
         day_number = date.timetuple().tm_yday
-
-        # Extract required aggregates with defaults
         sunshine_hours = aggregates.get("sunshine_hours", 0)
-       
-        # Log all parameters that will be used for calculation
+
         self.logger.info(
             f"Evaporation calculation parameters - "
             f"Date: {date.strftime('%Y-%m-%d')}, "

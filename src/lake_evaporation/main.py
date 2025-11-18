@@ -26,20 +26,15 @@ class LakeEvaporationApp:
         Args:
             config_file: Path to configuration file
         """
-        # Load configuration
         self.config = Config(config_file)
-
-        # Setup logger
         self.logger = setup_logger()
         self.logger.info("=" * 60)
         self.logger.info("Lake Evaporation Estimation System")
         self.logger.info("=" * 60)
         self.logger.info(f"Configuration: {self.config}")
 
-        # Initialize date utilities
         self.date_utils = DateUtils(self.logger)
 
-        # Initialize components (will be set in initialize_components)
         self.api_client: Optional[KistersAPI] = None
         self.discovery: Optional[TimeSeriesDiscovery] = None
         self.data_fetcher: Optional[DataFetcher] = None
@@ -51,9 +46,6 @@ class LakeEvaporationApp:
 
     def initialize_components(self) -> None:
         """Initialize all application components."""
-        self.logger.info("Initializing components...")
-
-        # API Client with new authentication
         self.api_client = KistersAPI(
             base_url=self.config.api_base_url,
             username=self.config.auth_username,
@@ -65,31 +57,23 @@ class LakeEvaporationApp:
             logger=self.logger
         )
 
-        # Login to the portal
-        self.logger.info("Logging in to KISTERS Web Portal...")
         self.api_client.login()
 
-        # Discovery (works across all organizations)
         self.discovery = TimeSeriesDiscovery(
             api_client=self.api_client,
             config=self.config,
             logger=self.logger
         )
 
-        # Data Fetcher
         self.data_fetcher = DataFetcher(
             api_client=self.api_client,
             config=self.config,
             logger=self.logger
         )
 
-        # Processor
         self.processor = DataProcessor(logger=self.logger)
-
-        # Evaporation Calculator
         self.evaporation_calc = EvaporationCalculator(logger=self.logger)
 
-        # Sunshine Calculator
         angstrom = self.config.get("constants.angstrom_prescott", {})
         self.sunshine_calc = SunshineCalculator(
             a=angstrom.get("a", constants.DEFAULT_ANGSTROM_A),
@@ -97,13 +81,11 @@ class LakeEvaporationApp:
             logger=self.logger
         )
 
-        # Sunshine Service
         self.sunshine_service = SunshineService(
             sunshine_calc=self.sunshine_calc,
             logger=self.logger
         )
 
-        # Writer
         self.writer = DataWriter(
             api_client=self.api_client,
             logger=self.logger
@@ -120,10 +102,8 @@ class LakeEvaporationApp:
                         based on each organization's timezone.
         """
         try:
-            # Initialize components
             self.initialize_components()
-            
-            # Type narrowing: assert components are initialized
+
             assert self.discovery is not None, "Discovery service not initialized"
             assert self.data_fetcher is not None, "Data fetcher not initialized"
             assert self.processor is not None, "Processor not initialized"
@@ -134,7 +114,6 @@ class LakeEvaporationApp:
 
             self.logger.info("Starting evaporation calculation run")
 
-            # Discover all lake evaporation time series across all organizations
             with LoggerContext(self.logger, "time series discovery"):
                 time_series_list = self.discovery.get_all_evaporation_timeseries()
 
@@ -144,30 +123,23 @@ class LakeEvaporationApp:
 
             self.logger.info(f"Processing {len(time_series_list)} time series")
 
-            # Get cached timeseries for lookup
             with LoggerContext(self.logger, "timeseries lookup initialization"):
                 cached_timeseries = self.discovery.get_cached_timeseries()
                 self.data_fetcher.set_timeseries_list(cached_timeseries)
 
-            # Process each location (each may have different timezone)
             results = {}
             for time_series in time_series_list:
                 try:
-                    # Determine target date for this organization's timezone
                     org_timezone = time_series.get("organization_timezone", "UTC")
-                    
+
                     if target_date is None:
-                        # Get previous day in organization's timezone
                         org_target_date, _ = self.date_utils.get_previous_day_range(org_timezone)
                     else:
-                        # Use provided date but ensure it's in the right timezone
                         if target_date.tzinfo is None:
-                            # Naive datetime - localize to organization timezone
                             org_target_date = self.date_utils.localize_to_timezone(
                                 target_date, org_timezone
                             )
                         else:
-                            # Aware datetime - convert to organization timezone
                             org_target_date = self.date_utils.convert_to_timezone(
                                 target_date, org_timezone
                             )
@@ -181,7 +153,6 @@ class LakeEvaporationApp:
                         exc_info=True
                     )
 
-            # Write results
             if results:
                 self.logger.info(f"Writing {len(results)} results")
                 status = self.writer.write_batch_values(results)
@@ -214,7 +185,6 @@ class LakeEvaporationApp:
         Returns:
             Result dictionary or None if processing failed
         """
-        # Type narrowing: assert components are initialized
         assert self.discovery is not None, "Discovery service not initialized"
         assert self.data_fetcher is not None, "Data fetcher not initialized"
         assert self.processor is not None, "Processor not initialized"
@@ -224,40 +194,32 @@ class LakeEvaporationApp:
         assert self.writer is not None, "Writer not initialized"
 
         location_name = location.get("name", "Unknown")
-        self.logger.info(f"Processing location: {location_name}")
 
-        # Validate metadata
         if not self.discovery.validate_metadata(location):
             self.logger.error(f"Invalid metadata for {location_name}")
             return None
 
-        # Fetch daily data
         with LoggerContext(self.logger, f"data fetch for {location_name}"):
             data, actual_units = self.data_fetcher.fetch_daily_data(location, target_date)
 
-        # Check data completeness
         if not self.data_fetcher.check_data_completeness(data):
             self.logger.error(f"Incomplete data for {location_name}")
             return None
 
-        # Calculate daily aggregates (min, max, mean)
         with LoggerContext(self.logger, f"aggregation for {location_name}"):
             aggregates = self.processor.calculate_daily_aggregates(data)
 
-        # Convert units (use actual units from timeseries, fall back to config)
         source_units = self.config.get("units", {})
         aggregates = self.processor.convert_units(aggregates, source_units, actual_units)
 
-        # Validate aggregates
         is_valid, errors = self.processor.validate_aggregates(aggregates)
         if not is_valid:
             self.logger.error(f"Invalid aggregates for {location_name}: {errors}")
             return None
 
-        # Calculate sunshine hours using best available method
         location_info = location.get("location", {})
         day_number = target_date.timetuple().tm_yday
-        
+
         with LoggerContext(self.logger, f"sunshine calculation for {location_name}"):
             sunshine_hours = self.sunshine_service.calculate_sunshine_hours(
                 data=data,
@@ -268,7 +230,6 @@ class LakeEvaporationApp:
             )
             aggregates["sunshine_hours"] = sunshine_hours
 
-        # Calculate evaporation
         with LoggerContext(self.logger, f"evaporation calculation for {location_name}"):
             evaporation = self.evaporation_calc.calculate_with_metadata(
                 aggregates=aggregates,
@@ -279,7 +240,6 @@ class LakeEvaporationApp:
 
         self.logger.info(f"Calculated evaporation: {evaporation:.2f} mm/day")
 
-        # Prepare result
         result = {
             "date": target_date,
             "evaporation": evaporation,
@@ -313,7 +273,6 @@ def main():
 
     args = parser.parse_args()
 
-    # Parse target date
     target_date = None
     if args.date:
         try:
@@ -322,7 +281,6 @@ def main():
             print(f"Invalid date format: {args.date}. Use YYYY-MM-DD")
             sys.exit(1)
 
-    # Run application
     try:
         app = LakeEvaporationApp(config_file=args.config)
         app.run(target_date=target_date)

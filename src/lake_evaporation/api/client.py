@@ -37,18 +37,14 @@ class APIClient:
         self.logger = logger or logging.getLogger(__name__)
         self.verify_ssl = verify_ssl
 
-        # Session state
         self.csrf_token: Optional[str] = None
         self.user_data: Optional[Dict[str, Any]] = None
         self.is_authenticated = False
 
-        # Disable SSL warnings when verify_ssl is False
         if not verify_ssl:
             import urllib3
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-
-        # Setup session with retry strategy
         self.session = requests.Session()
         retry_strategy = Retry(
             total=max_retries,
@@ -60,7 +56,6 @@ class APIClient:
         self.session.mount("http://", adapter)
         self.session.mount("https://", adapter)
 
-        # Set default headers
         self._update_headers()
 
     def _update_headers(self) -> None:
@@ -97,7 +92,6 @@ class APIClient:
         Raises:
             requests.exceptions.RequestException: On request failure
         """
-        # Ensure we're authenticated for non-auth endpoints
         if not skip_auth_check and not endpoint.startswith("/auth") and not self.is_authenticated:
             raise RuntimeError("Not authenticated. Call login() first.")
 

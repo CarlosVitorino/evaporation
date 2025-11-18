@@ -63,7 +63,6 @@ class TimeSeriesDiscovery:
         )
 
         try:
-            # Get all timeseries for this organization (with location data)
             all_timeseries = self.api_client.get_time_series_list(
                 organization_id=organization_id,
                 include_location_data=True,
@@ -72,9 +71,7 @@ class TimeSeriesDiscovery:
 
             self.logger.info(f"Found {len(all_timeseries)} total timeseries in organization")
 
-            # Store in cache if requested
             if store_all_timeseries:
-                # Extend the cache with these timeseries (avoiding duplicates by ID)
                 existing_ids = {ts.get("id") for ts in self._all_timeseries if ts.get("id")}
                 for ts in all_timeseries:
                     ts_id = ts.get("id")
@@ -82,10 +79,9 @@ class TimeSeriesDiscovery:
                         self._all_timeseries.append(ts)
                         existing_ids.add(ts_id)
 
-            # Filter timeseries that have lakeEvaporation metadata
             lake_evap_series = []
             for ts in all_timeseries:
-                metadata = ts.get("metadata") or {}  # Handle None metadata
+                metadata = ts.get("metadata") or {}
                 if "lakeEvaporation" in metadata:
                     lake_evap_series.append(ts)
 

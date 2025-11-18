@@ -66,7 +66,6 @@ class AuthAPI(APIClient):
         if not self.username and not self.email:
             raise ValueError("Either username or email is required for authentication")
 
-        # Prepare credentials
         credentials = {
             "password": self.password
         }
@@ -86,16 +85,12 @@ class AuthAPI(APIClient):
                 json=credentials
             )
 
-            # Extract CSRF token from response headers
             self.csrf_token = response.headers.get("x-csrf-token")
             if not self.csrf_token:
                 self.logger.warning("No x-csrf-token received in login response")
 
-            # Store user data
             self.user_data = response.json()
             self.is_authenticated = True
-
-            # Update headers with new CSRF token
             self._update_headers()
             if self.user_data is None:
                 self.logger.error("No user data received in login response")
@@ -123,7 +118,6 @@ class AuthAPI(APIClient):
         self.logger.info("Logging out from KISTERS Web Portal")
 
         try:
-            # Use internal method for logout (already authenticated)
             self._make_request("POST", "/auth/logout")
 
             self.is_authenticated = False
@@ -152,13 +146,10 @@ class AuthAPI(APIClient):
         self.logger.debug("Refreshing session")
 
         try:
-            # Use internal method for refresh (already authenticated)
             response = self._make_request("POST", "/auth/refresh")
 
-            # Update user data
             self.user_data = response.json()
 
-            # Update CSRF token if provided
             new_token = response.headers.get("x-csrf-token")
             if new_token:
                 self.csrf_token = new_token

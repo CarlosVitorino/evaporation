@@ -45,7 +45,6 @@ class DataAggregator:
         self.logger.info("Calculating daily aggregates")
         aggregates = {}
 
-        # Temperature aggregates - data points are [timestamp, value]
         if "temperature" in data and data["temperature"]:
             temps = [point[1] for point in data["temperature"] if len(point) > 1 and point[1] is not None]
             if temps:
@@ -55,7 +54,6 @@ class DataAggregator:
             else:
                 self.logger.warning("No valid temperature values")
 
-        # Humidity aggregates
         if "humidity" in data and data["humidity"]:
             rh = [point[1] for point in data["humidity"] if len(point) > 1 and point[1] is not None]
             if rh:
@@ -65,7 +63,6 @@ class DataAggregator:
             else:
                 self.logger.warning("No valid humidity values")
 
-        # Wind speed average
         if "wind_speed" in data and data["wind_speed"]:
             wind = [point[1] for point in data["wind_speed"] if len(point) > 1 and point[1] is not None]
             if wind:
@@ -74,7 +71,6 @@ class DataAggregator:
             else:
                 self.logger.warning("No valid wind speed values")
 
-        # Air pressure average
         if "air_pressure" in data and data["air_pressure"]:
             pressure = [point[1] for point in data["air_pressure"] if len(point) > 1 and point[1] is not None]
             if pressure:
@@ -83,11 +79,9 @@ class DataAggregator:
             else:
                 self.logger.warning("No valid air pressure values")
 
-        # Sunshine hours (if directly measured)
         if "sunshine_hours" in data and data["sunshine_hours"]:
             sunshine = [point[1] for point in data["sunshine_hours"] if len(point) > 1 and point[1] is not None]
             if sunshine:
-                # Sum for total daily sunshine hours
                 aggregates["sunshine_hours"] = sum(sunshine)
                 self.logger.debug(f"Sunshine hours: {aggregates['sunshine_hours']:.2f}")
 
