@@ -237,10 +237,20 @@ class LakeEvaporationApp:
         # Calculate daily aggregates (min, max, mean)
         with LoggerContext(self.logger, f"aggregation for {location_name}"):
             aggregates = self.processor.calculate_daily_aggregates(data)
+            
+            cloud_aggregates = self.processor.aggregator.aggregate_cloud_layers(data, actual_units)
+            for key, value in cloud_aggregates.items():
+                if value is not None:
+                    aggregates[key] = value
 
-        # Convert units (use actual units from timeseries, fall back to config)
-        source_units = self.config.get("units", {})
-        aggregates = self.processor.convert_units(aggregates, source_units, actual_units)
+        with LoggerContext(self.logger, f"unit conversion for {location_name}"):
+            source_units = self.config.get("units", {})
+            aggregates = self.processor.convert_units(aggregates, source_units, actual_units)
+            
+            cloud_aggregates = self.processor.aggregator.aggregate_cloud_layers(data, actual_units)
+            for key, value in cloud_aggregates.items():
+                if value is not None:
+                    aggregates[key] = value
 
         # Validate aggregates
         is_valid, errors = self.processor.validate_aggregates(aggregates)

@@ -5,7 +5,7 @@ Converts between different units for meteorological measurements.
 """
 
 import logging
-from typing import Dict, Optional
+from typing import Dict, Optional, List, Any
 
 
 class UnitConverter:
@@ -220,18 +220,41 @@ class UnitConverter:
         """
         from_unit_lower = from_unit.lower().strip()
         
-        # Already in hours
         if from_unit_lower in ["hour", "hours", "h", "hr", "hrs"]:
             return value
         
-        # Convert from minutes to hours
         if from_unit_lower in ["min", "mins", "minute", "minutes", "m"]:
             return value / 60.0
         
-        # Convert from seconds to hours
         if from_unit_lower in ["sec", "secs", "second", "seconds", "s"]:
             return value / 3600.0
         
-        # If unknown unit, log warning and assume hours
         self.logger.warning(f"Unknown time unit '{from_unit}', assuming hours")
         return value
+
+    def convert_cloud_cover_to_octas(self, value: float, from_unit: str) -> float:
+        """
+        Convert cloud cover to octas (0-8 scale).
+
+        Args:
+            value: Cloud cover value
+            from_unit: Source unit (%, percent, octas, oktas)
+
+        Returns:
+            Cloud cover in octas (0-8)
+        """
+        if value is None:
+            return None
+        
+        from_unit_lower = from_unit.lower().strip()
+        
+        if from_unit_lower in ["%", "percent", "percentage"]:
+            octas = (value / 100.0) * 8.0
+            octas = max(0.0, min(8.0, octas))
+            self.logger.debug(f"Converted cloud cover {value}% to {octas:.2f} octas")
+            return octas
+        elif from_unit_lower in ["octa", "octas", "okta", "oktas", "eighths"]:
+            return max(0.0, min(8.0, value))
+        else:
+            self.logger.warning(f"Unknown cloud cover unit '{from_unit}', assuming octas")
+            return max(0.0, min(8.0, value))

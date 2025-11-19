@@ -33,7 +33,10 @@ class TestRasterFallback(unittest.TestCase):
             "pressure": "PRMSL",
             "humidity": "RH_2M",
             "wind_speed": "FF_10M",
-            "cloud": "TCDC"
+            "cloud": "TCDC",
+            "low_clouds": "LCDC",
+            "medium_clouds": "MCDC",
+            "high_clouds": "HCDC"
         }
 
     def test_location_in_europe(self):
@@ -133,13 +136,26 @@ class TestRasterFallback(unittest.TestCase):
     @patch.object(RasterDataFetcher, 'fetch_raster_data_for_location')
     def test_fallback_triggers_on_missing_data(self, mock_fetch_raster):
         """Test that fallback is triggered when timeseries data is missing."""
-        # Mock raster data response
-        mock_fetch_raster.return_value = {
-            "temperature": [{"timestamp": "2024-01-01T12:00:00Z", "value": 15.2}],
-            "humidity": [{"timestamp": "2024-01-01T12:00:00Z", "value": 65.0}],
-            "wind_speed": [{"timestamp": "2024-01-01T12:00:00Z", "value": 12.5}],
-            "air_pressure": [{"timestamp": "2024-01-01T12:00:00Z", "value": 101.3}]
-        }
+        mock_fetch_raster.return_value = (
+            {
+                "temperature": [["2024-01-01T12:00:00Z", 15.2]],
+                "humidity": [["2024-01-01T12:00:00Z", 65.0]],
+                "wind_speed": [["2024-01-01T12:00:00Z", 12.5]],
+                "air_pressure": [["2024-01-01T12:00:00Z", 101.3]],
+                "low_clouds": [["2024-01-01T12:00:00Z", 25.0]],
+                "medium_clouds": [["2024-01-01T12:00:00Z", 50.0]],
+                "high_clouds": [["2024-01-01T12:00:00Z", 75.0]]
+            },
+            {
+                "temperature": "°C",
+                "humidity": "%",
+                "wind_speed": "km/h",
+                "air_pressure": "kPa",
+                "low_clouds": "%",
+                "medium_clouds": "%",
+                "high_clouds": "%"
+            }
+        )
 
         # Create data fetcher
         data_fetcher = DataFetcher(
@@ -170,6 +186,9 @@ class TestRasterFallback(unittest.TestCase):
         self.assertIn("humidity", data)
         self.assertIn("wind_speed", data)
         self.assertIn("air_pressure", data)
+        self.assertIn("low_clouds", data)
+        self.assertIn("medium_clouds", data)
+        self.assertIn("high_clouds", data)
 
 
 class TestRasterAPI(unittest.TestCase):

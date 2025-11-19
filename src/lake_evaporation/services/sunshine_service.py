@@ -105,12 +105,16 @@ class SunshineService:
         """Calculate from cloud layer data."""
         self.logger.info("Calculating sunshine hours from cloud layer data (Ne method)")
         
+        low_cloud = aggregates["low_cloud_octas"]
+        medium_cloud = aggregates["medium_cloud_octas"]
+        high_cloud = aggregates["high_cloud_octas"]
+        
         sunshine = self.sunshine_calc.calculate_from_cloud_cover_layers(
             latitude=latitude,
             day_number=day_number,
-            low_cloud_octas=aggregates["low_cloud_octas"],
-            medium_cloud_octas=aggregates["medium_cloud_octas"],
-            high_cloud_octas=aggregates["high_cloud_octas"]
+            low_cloud_octas=low_cloud,
+            medium_cloud_octas=medium_cloud,
+            high_cloud_octas=high_cloud
         )
         self.logger.info(f"Calculated sunshine hours from cloud layers: {sunshine:.2f}h")
         return sunshine

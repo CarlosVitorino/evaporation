@@ -60,12 +60,16 @@
       "pressure": "PRMSL",
       "humidity": "RH_2M",
       "wind_speed": "FF_10M",
-      "cloud": "TCDC"
+      "cloud": "TCDC",
+      "low_clouds": "LCDC",
+      "medium_clouds": "MCDC",
+      "high_clouds": "HCDC"
     },
     "_comments": {
       "datasource_id": "Raster datasource ID for fetching weather data",
       "use_as_fallback": "Use raster data when timeseries metadata is missing or invalid",
-      "models": "Model selection based on location: icon_eu for Europe, gfs for global (also fallback for Europe)"
+      "models": "Model selection based on location: icon_eu for Europe, gfs for global (also fallback for Europe)",
+      "parameters": "Cloud cover parameters: low_clouds (below 2km), medium_clouds (2-6km), high_clouds (above 6km). Units are automatically converted to octas if provided in %."
     }
   }
 }

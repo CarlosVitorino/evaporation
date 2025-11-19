@@ -32,6 +32,9 @@ Raster parameter names are automatically mapped to system parameters:
 | wind_speed      | FF_10M          |
 | pressure        | PRMSL           |
 | cloud           | TCDC            |
+| low_clouds      | LCDC            |
+| medium_clouds   | MCDC            |
+| high_clouds     | HCDC            |
 
 ## Configuration
 

@@ -297,12 +297,16 @@ class RasterDataFetcher:
               {
                   "temperature": [[timestamp, value], ...],
                   "humidity": [[timestamp, value], ...],
+                  "low_clouds": [[timestamp, value], ...],
+                  "medium_clouds": [[timestamp, value], ...],
+                  "high_clouds": [[timestamp, value], ...],
                   ...
               }
             - units: Dictionary mapping parameter type to unit symbol
               {
                   "temperature": "°C",
                   "humidity": "%",
+                  "low_clouds": "%",
                   ...
               }
         """
@@ -384,8 +388,8 @@ class RasterDataFetcher:
                     units[param_type] = parsed_result["unit"]
                 
                 self.logger.info(
-                    f"Fetched {len(parsed_result['data'])} data points for {param_type}"
-                    f"(model: {product_name} unit: {parsed_result['unit']})"
+                    f"Fetched {len(parsed_result['data'])} data points for {param_type} "
+                    f"(model: {product_name}, unit: {parsed_result['unit']})"
                 )
 
             except Exception as e:

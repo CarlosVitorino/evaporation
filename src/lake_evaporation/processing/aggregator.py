@@ -92,3 +92,42 @@ class DataAggregator:
                 self.logger.debug(f"Sunshine hours: {aggregates['sunshine_hours']:.2f}")
 
         return aggregates
+
+    def aggregate_cloud_layers(
+        self,
+        data: Dict[str, List[List[Any]]],
+        actual_units: Dict[str, str]
+    ) -> Dict[str, Optional[float]]:
+        """
+        Aggregate cloud layer data and convert to octas if needed.
+
+        Args:
+            data: Raw sensor data dictionary with cloud layer keys
+            actual_units: Unit information for each parameter
+
+        Returns:
+            Dictionary with cloud layer values in octas
+        """
+        from ..processing.converter import UnitConverter
+
+        converter = UnitConverter(self.logger)
+
+        def get_mean(data_points: List[List[Any]]) -> Optional[float]:
+            if not data_points:
+                return None
+            values = [v for _, v in data_points if v is not None]
+            return sum(values) / len(values) if values else None
+
+        result: Dict[str, Optional[float]] = {}
+
+        for layer in ["low_clouds", "medium_clouds", "high_clouds"]:
+            raw_value = get_mean(data.get(layer, []))
+            if raw_value is not None:
+                unit = actual_units.get(layer, "octas")
+                octas_key = f"{layer.replace('_clouds', '_cloud_octas')}"
+                result[octas_key] = converter.convert_cloud_cover_to_octas(raw_value, unit)
+            else:
+                octas_key = f"{layer.replace('_clouds', '_cloud_octas')}"
+                result[octas_key] = None
+
+        return result
