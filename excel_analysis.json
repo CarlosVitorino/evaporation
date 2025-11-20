@@ -1,0 +1,461 @@
+{
+  "source_file": "/home/user/evaporation/docs/ShuttleworthLakeEvaporation.xlsm",
+  "worksheet_name": "Shuttleworth Calculus",
+  "description": "Shuttleworth formula for daily lake evaporation calculation",
+  "test_scenario": {
+    "description": "Single test case with summer conditions at mid-latitude",
+    "inputs": {
+      "temperature": {
+        "Tmax_C": 33,
+        "Tmin_C": 17,
+        "cell_refs": [
+          "B4",
+          "B5"
+        ]
+      },
+      "humidity": {
+        "RHmax_percent": 60,
+        "RHmin_percent": 25,
+        "cell_refs": [
+          "B6",
+          "B7"
+        ]
+      },
+      "wind": {
+        "u10_kmh": 25,
+        "description": "Average wind speed at 10m height",
+        "cell_ref": "B8"
+      },
+      "sunshine": {
+        "n_hours": 16,
+        "description": "Actual hours of sunshine",
+        "cell_ref": "B9"
+      },
+      "pressure": {
+        "P_kPa": 99.9,
+        "description": "Average air pressure at station height",
+        "cell_ref": "B10"
+      },
+      "location": {
+        "latitude_deg": 51,
+        "altitude_m": 23,
+        "cell_refs": [
+          "E4",
+          "E5"
+        ]
+      },
+      "date": {
+        "day_number": 170,
+        "description": "Julian day (approximately June 19)",
+        "cell_ref": "E6"
+      },
+      "surface": {
+        "albedo": 0.23,
+        "description": "Surface reflectance (water)",
+        "cell_ref": "E7"
+      }
+    },
+    "expected_outputs": {
+      "EVlake_mm_day": 9.880705,
+      "aerodynamic_component_mm_day": 4.482773,
+      "radiation_component_mm_day": 5.397932,
+      "cell_refs": {
+        "total": "B52",
+        "aerodynamic": "B50",
+        "radiation": "B51"
+      }
+    }
+  },
+  "calculation_steps": [
+    {
+      "step": 1,
+      "name": "Wind Speed Conversion",
+      "variables": [
+        {
+          "name": "u (m/s)",
+          "formula": "u10 / 3.6",
+          "excel_formula": "=B8/3.6",
+          "cell": "B13",
+          "test_value": 6.944444,
+          "description": "Convert km/h to m/s"
+        },
+        {
+          "name": "u2 (m/s)",
+          "formula": "0.748 \u00d7 u",
+          "excel_formula": "=0.748*B13",
+          "cell": "B14",
+          "test_value": 5.194444,
+          "description": "Adjust wind speed from 10m to 2m height"
+        }
+      ]
+    },
+    {
+      "step": 2,
+      "name": "Saturation Vapor Pressure Calculations",
+      "variables": [
+        {
+          "name": "es(Tmax) (kPa)",
+          "formula": "0.6108 \u00d7 exp(17.27 \u00d7 Tmax / (Tmax + 237.3))",
+          "excel_formula": "=0.6108*EXP(17.27*B4/(B4+237.3))",
+          "cell": "B17",
+          "test_value": 5.030148,
+          "description": "Saturation vapor pressure at Tmax"
+        },
+        {
+          "name": "es(Tmin) (kPa)",
+          "formula": "0.6108 \u00d7 exp(17.27 \u00d7 Tmin / (Tmin + 237.3))",
+          "excel_formula": "=0.6108*EXP(17.27*B5/(B5+237.3))",
+          "cell": "B18",
+          "test_value": 1.937729,
+          "description": "Saturation vapor pressure at Tmin"
+        },
+        {
+          "name": "es (kPa)",
+          "formula": "(es(Tmax) + es(Tmin)) / 2",
+          "excel_formula": "=(B17+B18)/2",
+          "cell": "B19",
+          "test_value": 3.483939,
+          "description": "Mean saturation vapor pressure"
+        },
+        {
+          "name": "ea (kPa)",
+          "formula": "(es(Tmax) \u00d7 RHmax/100 + es(Tmin) \u00d7 RHmin/100) / 2",
+          "excel_formula": "=(B17*B6/100+B18*B7/100)/2",
+          "cell": "B20",
+          "test_value": 1.751261,
+          "description": "Actual vapor pressure"
+        },
+        {
+          "name": "\u03b4e (kPa)",
+          "formula": "es - ea",
+          "excel_formula": "=B19-B20",
+          "cell": "B21",
+          "test_value": 1.732678,
+          "description": "Vapor pressure deficit"
+        }
+      ]
+    },
+    {
+      "step": 3,
+      "name": "Temperature and Psychrometric Parameters",
+      "variables": [
+        {
+          "name": "\u03bbv (MJ/kg)",
+          "formula": "2.45",
+          "excel_formula": "2.45",
+          "cell": "B24",
+          "test_value": 2.45,
+          "description": "Latent heat of vaporization (constant)"
+        },
+        {
+          "name": "Tmean (\u00b0C)",
+          "formula": "(Tmax + Tmin) / 2",
+          "excel_formula": "=(B4+B5)/2",
+          "cell": "B25",
+          "test_value": 25.0,
+          "description": "Mean temperature"
+        },
+        {
+          "name": "\u0394 (kPa/\u00b0C)",
+          "formula": "4096 \u00d7 (0.6108 \u00d7 exp(17.27 \u00d7 Tmean / (Tmean + 237.3))) / (Tmean + 237.3)\u00b2",
+          "excel_formula": "=4096*(0.6108*EXP(17.27*B25/(B25+237.3)))/POWER((B25+237.3),2)",
+          "cell": "B26",
+          "test_value": 0.18859,
+          "description": "Slope of saturation vapor pressure curve"
+        },
+        {
+          "name": "\u03b3 (kPa/\u00b0C)",
+          "formula": "0.665 \u00d7 10\u207b\u00b3 \u00d7 P",
+          "excel_formula": "=0.665*POWER(10,-3)*B10",
+          "cell": "B27",
+          "test_value": 0.066434,
+          "description": "Psychrometric constant"
+        },
+        {
+          "name": "\u03bbv(\u0394+\u03b3)",
+          "formula": "\u03bbv \u00d7 (\u0394 + \u03b3)",
+          "excel_formula": "=B24*(B26+B27)",
+          "cell": "B28",
+          "test_value": 0.624807,
+          "description": "Combined parameter"
+        }
+      ]
+    },
+    {
+      "step": 4,
+      "name": "Aerodynamic Component",
+      "variables": [
+        {
+          "name": "Aerodynamic term",
+          "formula": "\u03b3 \u00d7 6.43 \u00d7 (1 + 0.536 \u00d7 u2) \u00d7 \u03b4e",
+          "excel_formula": "=B27*6.43*(1+0.536*B14)*B21",
+          "cell": "B29",
+          "test_value": 2.800868,
+          "description": "Wind function term"
+        },
+        {
+          "name": "Ea (mm/day)",
+          "formula": "Aerodynamic term / \u03bbv(\u0394+\u03b3)",
+          "excel_formula": "=B29/B28",
+          "cell": "B30",
+          "test_value": 4.482773,
+          "description": "Aerodynamic component of evaporation"
+        }
+      ]
+    },
+    {
+      "step": 5,
+      "name": "Solar Radiation Calculations",
+      "variables": [
+        {
+          "name": "\u03c6 (rad)",
+          "formula": "\u03c0/180 \u00d7 Latitude",
+          "excel_formula": "=PI()/180*E4",
+          "cell": "B33",
+          "test_value": 0.890118,
+          "description": "Latitude in radians"
+        },
+        {
+          "name": "dr",
+          "formula": "1 + 0.033 \u00d7 cos(2\u03c0 \u00d7 J / 365)",
+          "excel_formula": "=1+0.033*COS(2*PI()*E6/365)",
+          "cell": "B34",
+          "test_value": 0.967761,
+          "description": "Inverse relative distance Earth-Sun"
+        },
+        {
+          "name": "\u03b4 (rad)",
+          "formula": "0.409 \u00d7 sin(2\u03c0 \u00d7 J / 365 - 1.39)",
+          "excel_formula": "=0.409*SIN(2*PI()*E6/365-1.39)",
+          "cell": "B35",
+          "test_value": 0.408758,
+          "description": "Solar declination"
+        },
+        {
+          "name": "\u03c9s (rad)",
+          "formula": "arccos(-tan(\u03c6) \u00d7 tan(\u03b4))",
+          "excel_formula": "=ACOS(-TAN(B33)*TAN(B35))",
+          "cell": "B36",
+          "test_value": 2.135189,
+          "description": "Sunset hour angle"
+        },
+        {
+          "name": "Ra (MJ/m\u00b2/day)",
+          "formula": "(24\u00d760/\u03c0) \u00d7 0.082 \u00d7 dr \u00d7 [\u03c9s\u00d7sin(\u03c6)\u00d7sin(\u03b4) + cos(\u03c6)\u00d7cos(\u03b4)\u00d7sin(\u03c9s)]",
+          "excel_formula": "=24*60/PI()*0.082*B34*(B36*SIN(B33)*SIN(B35)+COS(B33)*COS(B35)*SIN(B36))",
+          "cell": "B37",
+          "test_value": 41.738019,
+          "description": "Extraterrestrial radiation"
+        },
+        {
+          "name": "N (hours)",
+          "formula": "(24/\u03c0) \u00d7 \u03c9s",
+          "excel_formula": "=24/PI()*B36",
+          "cell": "B38",
+          "test_value": 16.311642,
+          "description": "Maximum possible sunshine duration (daylight hours)"
+        },
+        {
+          "name": "n/N",
+          "formula": "n / N",
+          "excel_formula": "=B9/B38",
+          "cell": "B39",
+          "test_value": 0.980894,
+          "description": "Relative sunshine duration"
+        }
+      ]
+    },
+    {
+      "step": 6,
+      "name": "Net Radiation Calculations",
+      "variables": [
+        {
+          "name": "Rs (MJ/m\u00b2/day)",
+          "formula": "(0.25 + 0.5 \u00d7 n/N) \u00d7 Ra",
+          "excel_formula": "=(0.25+0.5*B39)*B37",
+          "cell": "B40",
+          "test_value": 30.904801,
+          "description": "Solar radiation (\u00c5ngstr\u00f6m formula)"
+        },
+        {
+          "name": "Rso (MJ/m\u00b2/day)",
+          "formula": "(0.75 + 2\u00d710\u207b\u2075 \u00d7 z) \u00d7 Ra",
+          "excel_formula": "=(0.75+2*E5/100000)*B37",
+          "cell": "B41",
+          "test_value": 31.322714,
+          "description": "Clear-sky solar radiation"
+        },
+        {
+          "name": "Rs/Rso",
+          "formula": "Rs / Rso",
+          "excel_formula": "=B40/B41",
+          "cell": "B42",
+          "test_value": 0.986658,
+          "description": "Cloudiness index"
+        },
+        {
+          "name": "Rns (MJ/m\u00b2/day)",
+          "formula": "(1 - \u03b1) \u00d7 Rs",
+          "excel_formula": "=(1-E7)*B40",
+          "cell": "B43",
+          "test_value": 23.796697,
+          "description": "Net shortwave radiation"
+        },
+        {
+          "name": "Rnl (MJ/m\u00b2/day)",
+          "formula": "4.903\u00d710\u207b\u2079 \u00d7 [(Tmax+273.16)\u2074 + (Tmin+273.16)\u2074]/2 \u00d7 (0.34 - 0.14\u00d7\u221aea) \u00d7 (1.35\u00d7Rs/Rso - 0.35)",
+          "excel_formula": "=4.903*POWER(10,-9)*(POWER(B4+273.16,4)+POWER(B5+273.16,4))/2*(0.34-0.14*SQRT(B20))*(1.35*B42-0.35)",
+          "cell": "B44",
+          "test_value": 5.913087,
+          "description": "Net longwave radiation"
+        },
+        {
+          "name": "Rn (MJ/m\u00b2/day)",
+          "formula": "Rns - Rnl",
+          "excel_formula": "=B43-B44",
+          "cell": "B45",
+          "test_value": 17.88361,
+          "description": "Net radiation"
+        }
+      ]
+    },
+    {
+      "step": 7,
+      "name": "Radiation Component",
+      "variables": [
+        {
+          "name": "\u0394\u00d7Rn",
+          "formula": "\u0394 \u00d7 Rn",
+          "excel_formula": "=B26*B45",
+          "cell": "B46",
+          "test_value": 3.372665,
+          "description": "Slope times net radiation"
+        },
+        {
+          "name": "Er (mm/day)",
+          "formula": "(\u0394 \u00d7 Rn) / \u03bbv(\u0394+\u03b3)",
+          "excel_formula": "=B46/B28",
+          "cell": "B47",
+          "test_value": 5.397932,
+          "description": "Radiation component of evaporation"
+        }
+      ]
+    },
+    {
+      "step": 8,
+      "name": "Final Evaporation",
+      "variables": [
+        {
+          "name": "EVlake (mm/day)",
+          "formula": "Ea + Er",
+          "excel_formula": "=SUM(B50:B51)",
+          "cell": "B52",
+          "test_value": 9.880705,
+          "description": "Total lake evaporation"
+        }
+      ]
+    }
+  ],
+  "alternative_method": {
+    "name": "Cloud-based Sunshine Hours Calculation",
+    "description": "Alternative method when actual sunshine hours are not observed",
+    "note_location": "Columns H-J, Rows 28-34",
+    "inputs": {
+      "Nl_octas": 3,
+      "Nm_octas": 2,
+      "Nh_octas": 4
+    },
+    "steps": [
+      {
+        "step": 1,
+        "formula": "Nlm = Nl + 0.875 \u00d7 ((8 - Nl) / 8) \u00d7 Nm",
+        "excel_formula": "=I29+0.875*((8-I29)/8)*I30",
+        "cell": "I32",
+        "test_value": 4.09375,
+        "description": "Combined low-medium cloud"
+      },
+      {
+        "step": 2,
+        "formula": "Ne = Nlm + 0.25 \u00d7 ((8 - Nlm) / 8) \u00d7 Nh",
+        "excel_formula": "=I32+0.25*((8-I32)/8)*I31",
+        "cell": "I33",
+        "test_value": 4.582031,
+        "description": "Effective cloud cover"
+      },
+      {
+        "step": 3,
+        "formula": "n = (1 - Ne/8) \u00d7 N",
+        "excel_formula": "=(1-I33/8)*B38",
+        "cell": "I34",
+        "test_value": 6.969086,
+        "description": "Calculated sunshine hours"
+      }
+    ],
+    "note": "This calculated sunshine value (6.97 hours) differs significantly from the observed value (16 hours) used in the main calculation, showing this is an alternative method, not part of the primary test case"
+  },
+  "constants": {
+    "latent_heat_vaporization": {
+      "symbol": "\u03bbv",
+      "value": 2.45,
+      "unit": "MJ/kg"
+    },
+    "solar_constant": {
+      "value": 0.082,
+      "unit": "MJ m\u207b\u00b2 min\u207b\u00b9"
+    },
+    "stefan_boltzmann": {
+      "value": 4.903e-09,
+      "unit": "MJ K\u207b\u2074 m\u207b\u00b2 day\u207b\u00b9"
+    },
+    "wind_speed_conversion": {
+      "kmh_to_ms": 3.6,
+      "height_adjustment_10m_to_2m": 0.748
+    },
+    "saturation_vapor_pressure": {
+      "constant": 0.6108,
+      "coefficient_1": 17.27,
+      "coefficient_2": 237.3
+    },
+    "psychrometric_constant": {
+      "coefficient": 0.000665
+    },
+    "aerodynamic_coefficients": {
+      "base": 6.43,
+      "wind_function": 0.536
+    },
+    "angstrom_formula": {
+      "a": 0.25,
+      "b": 0.5
+    },
+    "clear_sky_radiation": {
+      "a": 0.75,
+      "b": 2e-05,
+      "unit_b": "m\u207b\u00b9"
+    },
+    "longwave_radiation": {
+      "coefficient_1": 0.34,
+      "coefficient_2": 0.14,
+      "cloudiness_1": 1.35,
+      "cloudiness_2": 0.35
+    },
+    "slope_calculation": {
+      "constant": 4096
+    },
+    "cloud_weighting": {
+      "low_medium_weight": 0.875,
+      "high_weight": 0.25
+    }
+  },
+  "edge_cases_and_notes": [
+    "Wind speed must be converted from km/h to m/s (divide by 3.6)",
+    "Wind speed must be adjusted from 10m to 2m measurement height (multiply by 0.748)",
+    "Temperatures must be converted to Kelvin for longwave radiation calculation (add 273.16)",
+    "Albedo value of 0.23 is specific to water surfaces",
+    "Atmospheric pressure affects psychrometric constant (implicit altitude correction)",
+    "Cloud cover can substitute for observed sunshine hours when pyranometer data unavailable",
+    "Latitude must be converted from degrees to radians for trigonometric calculations",
+    "Day number (J) ranges from 1-365 (366 for leap years)",
+    "Relative humidity should be provided as daily extremes (RHmax, RHmin) not average",
+    "Formula separates evaporation into physical components: aerodynamic (wind-driven) and radiative (energy-driven)"
+  ]
+}
