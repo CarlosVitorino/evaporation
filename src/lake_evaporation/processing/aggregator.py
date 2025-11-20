@@ -30,7 +30,7 @@ class DataAggregator:
 
         Args:
             data: Dictionary with sensor data lists.
-                  Each list contains [timestamp, value] pairs.
+                  Each list contains [timestamp, value] pairs or {"timestamp": ..., "value": ...} dicts.
 
         Returns:
             Dictionary with aggregated values:
@@ -45,9 +45,16 @@ class DataAggregator:
         self.logger.info("Calculating daily aggregates")
         aggregates = {}
 
-        # Temperature aggregates - data points are [timestamp, value]
+        def extract_value(point: Any) -> Optional[float]:
+            if isinstance(point, dict):
+                return point.get("value")
+            elif isinstance(point, (list, tuple)) and len(point) > 1:
+                return point[1]
+            return None
+
         if "temperature" in data and data["temperature"]:
-            temps = [point[1] for point in data["temperature"] if len(point) > 1 and point[1] is not None]
+            temps = [extract_value(point) for point in data["temperature"]]
+            temps = [t for t in temps if t is not None]
             if temps:
                 aggregates["t_min"] = min(temps)
                 aggregates["t_max"] = max(temps)
@@ -55,9 +62,9 @@ class DataAggregator:
             else:
                 self.logger.warning("No valid temperature values")
 
-        # Humidity aggregates
         if "humidity" in data and data["humidity"]:
-            rh = [point[1] for point in data["humidity"] if len(point) > 1 and point[1] is not None]
+            rh = [extract_value(point) for point in data["humidity"]]
+            rh = [h for h in rh if h is not None]
             if rh:
                 aggregates["rh_min"] = min(rh)
                 aggregates["rh_max"] = max(rh)
@@ -65,29 +72,28 @@ class DataAggregator:
             else:
                 self.logger.warning("No valid humidity values")
 
-        # Wind speed average
         if "wind_speed" in data and data["wind_speed"]:
-            wind = [point[1] for point in data["wind_speed"] if len(point) > 1 and point[1] is not None]
+            wind = [extract_value(point) for point in data["wind_speed"]]
+            wind = [w for w in wind if w is not None]
             if wind:
                 aggregates["wind_speed_avg"] = statistics.mean(wind)
                 self.logger.debug(f"Wind speed avg: {aggregates['wind_speed_avg']:.2f}")
             else:
                 self.logger.warning("No valid wind speed values")
 
-        # Air pressure average
         if "air_pressure" in data and data["air_pressure"]:
-            pressure = [point[1] for point in data["air_pressure"] if len(point) > 1 and point[1] is not None]
+            pressure = [extract_value(point) for point in data["air_pressure"]]
+            pressure = [p for p in pressure if p is not None]
             if pressure:
                 aggregates["air_pressure_avg"] = statistics.mean(pressure)
                 self.logger.debug(f"Air pressure avg: {aggregates['air_pressure_avg']:.2f}")
             else:
                 self.logger.warning("No valid air pressure values")
 
-        # Sunshine hours (if directly measured)
         if "sunshine_hours" in data and data["sunshine_hours"]:
-            sunshine = [point[1] for point in data["sunshine_hours"] if len(point) > 1 and point[1] is not None]
+            sunshine = [extract_value(point) for point in data["sunshine_hours"]]
+            sunshine = [s for s in sunshine if s is not None]
             if sunshine:
-                # Sum for total daily sunshine hours
                 aggregates["sunshine_hours"] = sum(sunshine)
                 self.logger.debug(f"Sunshine hours: {aggregates['sunshine_hours']:.2f}")
 
@@ -112,10 +118,18 @@ class DataAggregator:
 
         converter = UnitConverter(self.logger)
 
-        def get_mean(data_points: List[List[Any]]) -> Optional[float]:
+        def extract_value(point: Any) -> Optional[float]:
+            if isinstance(point, dict):
+                return point.get("value")
+            elif isinstance(point, (list, tuple)) and len(point) > 1:
+                return point[1]
+            return None
+
+        def get_mean(data_points: List[Any]) -> Optional[float]:
             if not data_points:
                 return None
-            values = [v for _, v in data_points if v is not None]
+            values = [extract_value(p) for p in data_points]
+            values = [v for v in values if v is not None]
             return sum(values) / len(values) if values else None
 
         result: Dict[str, Optional[float]] = {}

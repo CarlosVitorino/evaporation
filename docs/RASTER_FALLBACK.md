@@ -140,6 +140,7 @@ Raster parameter names are automatically mapped to system parameters:
 ┌──────────────────┐      ┌──────────────────────┐
 │ TimeSeriesAPI    │      │ RasterDataFetcher    │
 │ (Primary)        │      │ (Fallback)           │
+│                  │      │ - Caches on init     │
 └──────────────────┘      └──────────┬───────────┘
                                      │
                                      v
@@ -155,10 +156,11 @@ Raster parameter names are automatically mapped to system parameters:
 #### 1. RasterAPI (`api/raster.py`)
 - Mixin class for raster-related API operations
 - Handles communication with raster endpoints
-- Properly encodes query parameters (JSON encoding for complex objects)
+- Raster timeseries list is global (not organization-specific)
 
 #### 2. RasterDataFetcher (`raster_fetcher.py`)
 - Main logic for raster data fetching
+- **Optimization**: Fetches and caches timeseries list once at initialization
 - Location-based model selection
 - Timeseries filtering by model and parameter
 - Data parsing and formatting
@@ -279,10 +281,10 @@ The raster fallback system includes comprehensive error handling:
 
 ## Performance Considerations
 
-- **Caching**: Raster timeseries list is cached to avoid repeated API calls
-- **Lazy Loading**: Raster data is only fetched when needed
+- **Initialization Caching**: Raster timeseries list is fetched once at initialization and cached
+- **Global Data**: Raster data is not organization-specific, eliminating redundant API calls
+- **Lazy Loading**: Raster point data is only fetched when needed
 - **Selective Fetching**: Only missing parameters are fetched from raster
-- **Parallel Requests**: Could be enhanced to fetch multiple parameters in parallel
 
 ## Future Enhancements
 

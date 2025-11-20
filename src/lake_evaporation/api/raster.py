@@ -25,51 +25,31 @@ class RasterAPI:
 
     def get_raster_timeseries_list(
         self,
-        datasource_id: int,
-        organization_id: Optional[str] = None,
         **kwargs: Any
     ) -> List[Dict[str, Any]]:
         """
-        Get list of available raster timeseries for a datasource.
+        Get list of available raster timeseries.
 
         Args:
-            datasource_id: Raster datasource ID
-            organization_id: Organization ID (optional)
             **kwargs: Additional query parameters
 
         Returns:
             List of raster timeseries objects with metadata
-
-        Example response item:
-            {
-                "timeseriesId": "5b80141d-5843-445f-9249-66c2c6741052",
-                "path": "/gfs/PRMSL",
-                "name": "PRMSL",
-                "unitSymbol": "Pa",
-                "parameterKey": "Pressure",
-                "coverage": {...},
-                "boundingBox": {...},
-                ...
-            }
         """
-        self.logger.info(f"Fetching raster timeseries list for datasource {datasource_id}")  # type: ignore
 
         params = {}
-        if organization_id:
-            params["orgId"] = organization_id
+        # Note: organization_id is not used for raster timeseries list
+        # All raster data is global and not organization-specific
 
-        # Add any additional query parameters
         params.update(kwargs)
 
-        # Build endpoint with query string
-        endpoint = f"/raster/datasources/{datasource_id}/timeSeries"
+        endpoint = f"/raster/timeSeries"
         if params:
             query_string = urlencode(params)
             endpoint = f"{endpoint}?{query_string}"
 
         result = self.get(endpoint, params=None)  # type: ignore
 
-        # API returns a list
         if isinstance(result, list):
             return result
         return []

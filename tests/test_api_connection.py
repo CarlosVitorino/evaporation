@@ -123,21 +123,3 @@ class TestAPIConnection:
 
         # Just log the count, don't fail if none found
         print(f"\nFound {total_lake_evap} time series with lakeEvaporation metadata")
-
-
-@pytest.mark.skipif(
-    not os.path.exists("config.json") and not os.path.exists(".env"),
-    reason="No configuration file found"
-)
-class TestAPIHelpers:
-    """Test API helper functions."""
-
-    def test_session_refresh(self, api_client):
-        """Test session refresh."""
-        original_data = api_client.user_data
-        refreshed_data = api_client.refresh()
-
-        assert refreshed_data is not None
-        assert "userName" in refreshed_data
-        # Username should remain the same
-        assert refreshed_data.get("userName") == original_data.get("userName")

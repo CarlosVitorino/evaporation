@@ -45,6 +45,7 @@ class SunshineCalculator:
 
         Args:
             radiation_data: List of (timestamp, radiation) tuples in W/m²
+                           or list of dicts with "value" key
             latitude: Latitude in decimal degrees
             day_number: Day of year (1-365)
 
@@ -54,10 +55,21 @@ class SunshineCalculator:
         if not radiation_data:
             return 0.0
 
-        # Calculate daily mean solar radiation (W/m² to MJ/m²/day)
-        total_radiation_wm2 = sum(value for _, value in radiation_data)
-        mean_radiation_wm2 = total_radiation_wm2 / len(radiation_data)
-        # Convert W/m² to MJ/m²/day (1 W/m² over 24h = 0.0864 MJ/m²/day)
+        def extract_value(point: Any) -> Optional[float]:
+            if isinstance(point, dict):
+                return point.get("value")
+            elif isinstance(point, (list, tuple)) and len(point) > 1:
+                return point[1]
+            return None
+
+        values = [extract_value(point) for point in radiation_data]
+        values = [v for v in values if v is not None]
+        
+        if not values:
+            return 0.0
+
+        total_radiation_wm2 = sum(values)
+        mean_radiation_wm2 = total_radiation_wm2 / len(values)
         rs = mean_radiation_wm2 * 0.0864
 
         return self.calculate_sunshine_hours(
@@ -156,15 +168,14 @@ class SunshineCalculator:
         nm = max(0.0, min(8.0, medium_cloud_octas))
         nh = max(0.0, min(8.0, high_cloud_octas))
         
-        # Step 3: Calculate effective low+medium cloud cover
+        # Step 3: Calculate effective low+medium cloud cover (nel)
         effective_low_medium = nl + 0.875 * ((8 - nl) / 8) * nm
         
         # Step 4: Calculate total effective cloud cover (Ne)
         effective_total_cloud = effective_low_medium + 0.25 * ((8 - effective_low_medium) / 8) * nh
         
         # Step 5: Convert effective cloud cover to sunshine fraction
-        cloud_fraction = effective_total_cloud / 8.0
-        sunshine_fraction = 1.0 - 0.75 * cloud_fraction
+        sunshine_fraction = 1.0 - (effective_total_cloud / 8.0) 
         sunshine_fraction = max(0.0, min(1.0, sunshine_fraction))
         
         # Step 6: Calculate actual sunshine hours

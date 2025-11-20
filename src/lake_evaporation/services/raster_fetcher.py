@@ -50,6 +50,28 @@ class RasterDataFetcher:
         self.logger = logger or logging.getLogger(__name__)
         self.date_utils = DateUtils(logger)
         self._cached_timeseries_list: Optional[List[Dict[str, Any]]] = None
+        
+        self._fetch_and_cache_timeseries_list()
+
+    def _fetch_and_cache_timeseries_list(self) -> None:
+        """
+        Fetch and cache the raster timeseries list at initialization.
+        
+        This is done once to avoid repeated API calls since raster data
+        is global and not organization-specific.
+        """
+        if self._cached_timeseries_list is not None:
+            return
+        
+        self.logger.info("Fetching raster timeseries list (one-time initialization)")
+        datasource_id = self.config.raster_datasource_id
+
+        try:
+            self._cached_timeseries_list = self.api.get_raster_timeseries_list()
+            self.logger.info(f"Cached {len(self._cached_timeseries_list)} raster timeseries")
+        except Exception as e:
+            self.logger.error(f"Failed to fetch raster timeseries list: {e}")
+            self._cached_timeseries_list = []
 
     def is_location_in_europe(self, latitude: float, longitude: float) -> bool:
         """
@@ -95,7 +117,7 @@ class RasterDataFetcher:
         Get list of available raster timeseries.
 
         Args:
-            organization_id: Optional organization ID
+            organization_id: Not used (kept for API compatibility)
             force_refresh: Force refresh of cached list
 
         Returns:
@@ -104,19 +126,8 @@ class RasterDataFetcher:
         if self._cached_timeseries_list is not None and not force_refresh:
             return self._cached_timeseries_list
 
-        self.logger.info("Fetching raster timeseries list")
-        datasource_id = self.config.raster_datasource_id
-
-        try:
-            self._cached_timeseries_list = self.api.get_raster_timeseries_list(
-                datasource_id=datasource_id,
-                organization_id=organization_id
-            )
-            self.logger.info(f"Found {len(self._cached_timeseries_list)} raster timeseries")
-            return self._cached_timeseries_list
-        except Exception as e:
-            self.logger.error(f"Failed to fetch raster timeseries list: {e}")
-            return []
+        self._fetch_and_cache_timeseries_list()
+        return self._cached_timeseries_list or []
 
     def filter_timeseries_by_model_and_parameter(
         self,
@@ -168,19 +179,11 @@ class RasterDataFetcher:
         Args:
             latitude: Location latitude
             longitude: Location longitude
-            organization_id: Optional organization ID
+            organization_id: Not used (kept for API compatibility)
 
         Returns:
-            Dictionary mapping weather parameter type to raster timeseries:
-            {
-                "temperature": {...},
-                "humidity": {...},
-                "wind_speed": {...},
-                "pressure": {...},
-                "cloud": {...}
-            }
+            Dictionary mapping weather parameter type to raster timeseries
         """
-        # Determine model based on location
         primary_model, fallback_model = self.get_model_for_location(latitude, longitude)
 
         self.logger.info(
@@ -188,25 +191,21 @@ class RasterDataFetcher:
             f"Primary model={primary_model}, Fallback={fallback_model}"
         )
 
-        # Get available raster timeseries
-        timeseries_list = self._get_raster_timeseries_list(organization_id)
+        timeseries_list = self._get_raster_timeseries_list()
 
         if not timeseries_list:
             self.logger.warning("No raster timeseries available")
-            # Get parameter mappings for the primary model to return correct keys
             try:
                 param_mappings = self.config.get_raster_parameters_for_model(primary_model)
                 return {key: None for key in param_mappings.keys()}
             except Exception:
                 return {}
 
-        # Try primary model first with model-specific parameters
         result = self._find_timeseries_for_model_with_params(
             timeseries_list,
             primary_model
         )
 
-        # If any parameters are missing and we have a fallback model, try it
         if fallback_model and primary_model != fallback_model:
             missing_params = [k for k, v in result.items() if v is None]
             if missing_params:
@@ -218,7 +217,6 @@ class RasterDataFetcher:
                     fallback_model,
                     only_params=missing_params
                 )
-                # Update result with fallback values
                 for k, v in fallback_result.items():
                     if v is not None:
                         result[k] = v
@@ -410,15 +408,14 @@ class RasterDataFetcher:
         Args:
             param_type: Parameter type (e.g., "temperature")
             fallback_model: Fallback model identifier
-            organization_id: Optional organization ID
+            organization_id: Not used (kept for API compatibility)
 
         Returns:
             Fallback timeseries object or None
         """
         try:
-            timeseries_list = self._get_raster_timeseries_list(organization_id)
+            timeseries_list = self._get_raster_timeseries_list()
             
-            # Get model-specific parameter mappings
             param_mappings = self.config.get_raster_parameters_for_model(fallback_model)
             
             if param_type not in param_mappings:

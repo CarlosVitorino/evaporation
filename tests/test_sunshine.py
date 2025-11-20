@@ -127,8 +127,11 @@ class TestSunshineCalculatorFromCloudCover:
     def test_calculate_from_cloud_cover_excel_reference(self, calculator):
         """Test cloud cover calculation using Excel reference values."""
         # Excel test case: Nl=3, Nm=2, Nh=4 → n=6.97 hours (at latitude 51°, day 170)
-        # Note: The implementation uses a different cloud-to-sunshine conversion formula
-        # than the Excel file, so we test that the result is reasonable, not exact
+        # Nel = 3 + 0.875 * ((8 - 3) / 8) * 2 = 3 + 0.875 * 0.625 * 2 = 4.09375
+        # Ne = 4.09375 + 0.25 * ((8 - 4.09375) / 8) * 4 = 4.09375 + 0.25 * 0.488... * 4 = 4.58203125
+        # N = ~16.569 hours (for lat 51°, day 170)
+        # n = N * (1 - Ne/8) = 16.569 * (1 - 4.58203125/8) = 16.569 * 0.4277... = 6.97 hours
+        
         sunshine = calculator.calculate_from_cloud_cover_layers(
             latitude=51.0,
             day_number=170,
@@ -137,10 +140,11 @@ class TestSunshineCalculatorFromCloudCover:
             high_cloud_octas=4.0
         )
 
-        # Should give reasonable sunshine hours (less than max daylight)
-        max_daylight = calculator._calculate_daylight_hours(51.0, 170)
-        assert 0 < sunshine < max_daylight, \
-            f"Cloud cover should give reasonable sunshine hours, got {sunshine:.3f} (max {max_daylight:.1f})"
+        # Excel shows n=6.97 hours
+        expected = 6.97
+        tolerance = 0.01
+        assert abs(sunshine - expected) < tolerance, \
+            f"Expected {expected:.2f}h ± {tolerance}h, got {sunshine:.2f}h"
 
     def test_calculate_from_cloud_cover_clear_sky(self, calculator):
         """Test with completely clear sky."""
